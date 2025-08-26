@@ -9,105 +9,131 @@ generator client {
 }
 
 enum Role {
-  admin
-  teacher
-  student
+    admin
+    teacher
+    student
 }
 
 enum ChoiceType {
-  text
-  image
+    text
+    image
 }
 
 enum LogAction {
-  login
-  view_subject
-  view_lesson
-  submit_activity
+    login
+    view_subject
+    view_lesson
+    submit_activity
+}
+
+enum Gender {
+  male
+  female
+  other
 }
 
 model User {
-  id            String   @id @default(uuid())
-  full_name     String
-  email         String   @unique
-  password_hash String
-  role          Role
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+    id               String    @id @default(uuid())
+    full_name        String
+    username         String    @unique
+    password_hash    String
+    role             String
+    avatar           String?
+    nickname         String?
+    gender           Gender?
+    created_at       DateTime  @default(now())
+    updated_at       DateTime  @updatedAt
 
-  // Created lessons as teacher
-  lessons       Lesson[]        @relation("UserLessons")
+    // For teacher and admin 
+    email            String?    @unique
+
+    // Created lessons as teacher
+    lessons          Lesson[]  @relation("UserLessons")
   
-  // Assigned sections for a teacher
-  sections_taught      Section[]        @relation('SectionTeacher')
+    // Assigned sections for a teacher
+    sections_taught  Section[] @relation('SectionTeacher')
   
-  // Assigned section for the student
-  assigned_section      Section[]        @relation('SectionStudents')
+    // Assigned section for the student
+    assigned_section Section[] @relation('SectionStudents')
 
-  // activities    Activity[]      @relation("UserActivities")
-  // submissions   ActivitySubmission[]
-  // logs          ActivityLog[]
+    // Student's guardian
+    guardian Guardian?
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('all', auth().id == id)
-  @@deny('all', true) // deny everything else by default
+    // activities    Activity[]      @relation("UserActivities")
+    // submissions   ActivitySubmission[]
+    // logs          ActivityLog[]
+
+    @@allow('all', auth().role == 'admin')           // Admins can do everything
+    @@allow('create', auth().role == 'admin')        // Only admins can create users
+    @@allow('update', auth().id == id)               // Users can update themselves
+    @@allow('read', true)                            // Anyone can read user records
+    @@deny('all', true)                              // Deny everything else by default
 }
 
 model Section {
-  id          String    @id @default(uuid())
-  name        String    @unique
+    id         String    @id @default(uuid())
+    name       String    @unique
 
-  teacher_id  String
-  teacher     User      @relation('SectionTeacher',fields: [teacher_id], references: [id])
+    teacher_id String
+    teacher    User      @relation('SectionTeacher',  fields: [teacher_id], references: [id])
 
-  subjects    Subject[] @relation('SectionSubjects')
-  students    User[]    @relation('SectionStudents')
+    subjects   Subject[] @relation('SectionSubjects')
+    students   User[]    @relation('SectionStudents')
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('read', auth().role == 'student' || auth().role == 'teacher')
-  @@deny('all', true) // deny everything else by default
+    @@allow('all', auth().role == 'admin')
+    @@allow('read', auth().role == 'student' || auth().role == 'teacher')
+    @@deny('all', true) // deny everything else by default
 }
 
 model Subject {
-  id          String    @id @default(uuid())
-  title       String
-  description String?
-  image       String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+    id                String    @id @default(uuid())
+    title             String
+    description       String?
+    image             String
+    created_at        DateTime  @default(now())
+    updated_at        DateTime  @updatedAt
 
-  assigned_sections Section[] @relation('SectionSubjects')
+    assigned_sections Section[] @relation('SectionSubjects')
 
-  lessons     Lesson[]
+    lessons           Lesson[]
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('read', auth().role == 'teacher')
-  @@allow('read', auth().role == 'student')
-  @@deny('all', true)
+    @@allow('create', auth().role == 'admin') // admins can create users
+    @@allow('all', auth().role == 'admin')
+    @@allow('read', auth().role == 'teacher')
+    @@allow('read', auth().role == 'student')
 }
 
 model Lesson {
-  id           String   @id @default(uuid())
-  title        String
-  video_url    String
-  subtitle_url String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+    id           String   @id @default(uuid())
+    title        String
+    video_url    String
+    subtitle_url String?
+    created_at   DateTime @default(now())
+    updated_at   DateTime @updatedAt
 
-  subject_id    String
-  subject       Subject   @relation(fields: [subject_id], references: [id])
+    subject_id   String
+    subject      Subject  @relation(fields: [subject_id], references: [id])
 
-  created_by   String
-  creator      User     @relation("UserLessons", fields: [created_by], references: [id])
+    created_by   String
+    creator      User     @relation("UserLessons", fields: [created_by], references: [id])
 
-  // activities   Activity[]
+    // activities   Activity[]
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('create', auth().role == 'teacher')
-  @@allow('update', auth().role == 'teacher' && created_by == auth().id)
-  @@allow('delete', auth().role == 'teacher' && created_by == auth().id)
-  @@allow('read', true)
-  @@deny('all', true)
+    @@allow('all', auth().role == 'admin')
+    @@allow('create', auth().role == 'teacher')
+    @@allow('update', auth().role == 'teacher' && created_by == auth().id)
+    @@allow('delete', auth().role == 'teacher' && created_by == auth().id)
+    @@allow('read', true)
+}
+
+model Guardian {
+  id String @id @default(uuid())
+  name String
+  email String @unique
+  contact String
+
+  student_id String @unique
+  student User @relation(fields: [student_id], references: [id])
 }
 
 // model Activity {

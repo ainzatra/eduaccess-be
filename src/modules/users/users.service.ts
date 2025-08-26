@@ -1,0 +1,71 @@
+import { Injectable, Inject, HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { ENHANCED_PRISMA } from '@zenstackhq/server/nestjs';
+import { User } from '@prisma/client';
+import { PrismaService } from 'src/prisma.service';
+import bcrypt from 'bcrypt'
+import { ClsService } from 'nestjs-cls';
+
+@Injectable()
+export class UsersService {
+  constructor(
+      private readonly cls: ClsService,
+      private readonly prisma: PrismaService) {}
+
+  async create(body): Promise<User> {
+    if (body.password && body.confirm_password && body.password !== body.confirm_password) {
+      throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST)
+    }
+
+    const saltRounds = 10
+    const hashedPassword = await bcrypt.hash(body.password, saltRounds)
+    const data = {
+      full_name: body.full_name,
+      username: body.username,
+      role: body.role,
+      password_hash: hashedPassword
+    }
+    
+    return this.prisma.user.create({ data });
+  }
+
+  async findAll(): Promise<User[]> {
+    return this.prisma.user.findMany()
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        email: email,
+      },
+    });
+  }
+
+  async findByUsername(username: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        username: username,
+      },
+    });
+  }
+
+  async fetchStudentTeacher(): Promise<User[] | null> {
+    const { role } = this.cls.get('auth')
+    if (role !== 'admin') {
+      throw new UnauthorizedException()
+    }
+    const students = await this.prisma.user.findMany({
+      where: {
+        role: 'student'
+      }
+    })
+    const teachers = await this.prisma.user.findMany({
+      where: {
+        role: 'teacher'
+      }
+    })
+
+    const data = [...students, ...teachers]
+    console.log('fetch student teacher', {data})
+    return data
+  }
+}

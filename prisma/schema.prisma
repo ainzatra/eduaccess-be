@@ -30,17 +30,28 @@ enum LogAction {
   submit_activity
 }
 
+enum Gender {
+  male
+  female
+  other
+}
+
 model User {
   id               String    @id() @default(uuid())
   full_name        String
-  email            String    @unique()
+  username         String    @unique()
   password_hash    String
-  role             Role
+  role             String
+  avatar           String?
+  nickname         String?
+  gender           Gender?
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt()
+  email            String?   @unique()
   lessons          Lesson[]  @relation("UserLessons")
   sections_taught  Section[] @relation("SectionTeacher")
   assigned_section Section[] @relation("SectionStudents")
+  guardian         Guardian?
 }
 
 model Section {
@@ -74,4 +85,13 @@ model Lesson {
   subject      Subject  @relation(fields: [subject_id], references: [id])
   created_by   String
   creator      User     @relation("UserLessons", fields: [created_by], references: [id])
+}
+
+model Guardian {
+  id         String @id() @default(uuid())
+  name       String
+  email      String @unique()
+  contact    String
+  student_id String @unique()
+  student    User   @relation(fields: [student_id], references: [id])
 }
