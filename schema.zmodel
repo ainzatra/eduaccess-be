@@ -1,5 +1,3 @@
-// This is a sample model to get you started.
-
 /// A sample data source using local sqlite db.
 datasource db {
     provider = 'postgresql'
@@ -23,7 +21,7 @@ enum ChoiceType {
 
 enum LogAction {
   login
-  view_course
+  view_subject
   view_lesson
   submit_activity
 }
@@ -37,34 +35,54 @@ model User {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  courses       Course[]        @relation("UserCourses")
+  // Created lessons as teacher
   lessons       Lesson[]        @relation("UserLessons")
-  activities    Activity[]      @relation("UserActivities")
-  submissions   ActivitySubmission[]
-  logs          ActivityLog[]
+  
+  // Assigned sections for a teacher
+  sections_taught      Section[]        @relation('SectionTeacher')
+  
+  // Assigned section for the student
+  assigned_section      Section[]        @relation('SectionStudents')
+
+  // activities    Activity[]      @relation("UserActivities")
+  // submissions   ActivitySubmission[]
+  // logs          ActivityLog[]
 
   @@allow('all', auth().role == 'admin')
   @@allow('all', auth().id == id)
   @@deny('all', true) // deny everything else by default
 }
 
-model Course {
-  id          String   @id @default(uuid())
+model Section {
+  id          String    @id @default(uuid())
+  name        String    @unique
+
+  teacher_id  String
+  teacher     User      @relation('SectionTeacher',fields: [teacher_id], references: [id])
+
+  subjects    Subject[] @relation('SectionSubjects')
+  students    User[]    @relation('SectionStudents')
+
+  @@allow('all', auth().role == 'admin')
+  @@allow('read', auth().role == 'student' || auth().role == 'teacher')
+  @@deny('all', true) // deny everything else by default
+}
+
+model Subject {
+  id          String    @id @default(uuid())
   title       String
   description String?
+  image       String
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  created_by  String
-  creator     User     @relation("UserCourses", fields: [created_by], references: [id])
+  assigned_sections Section[] @relation('SectionSubjects')
 
   lessons     Lesson[]
 
   @@allow('all', auth().role == 'admin')
-  @@allow('create', auth().role == 'teacher')
-  @@allow('update', auth().role == 'teacher' && created_by == auth().id)
-  @@allow('delete', auth().role == 'teacher' && created_by == auth().id)
-  @@allow('read', true)
+  @@allow('read', auth().role == 'teacher')
+  @@allow('read', auth().role == 'student')
   @@deny('all', true)
 }
 
@@ -76,13 +94,13 @@ model Lesson {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
-  course_id    String
-  course       Course   @relation(fields: [course_id], references: [id])
+  subject_id    String
+  subject       Subject   @relation(fields: [subject_id], references: [id])
 
   created_by   String
   creator      User     @relation("UserLessons", fields: [created_by], references: [id])
 
-  activities   Activity[]
+  // activities   Activity[]
 
   @@allow('all', auth().role == 'admin')
   @@allow('create', auth().role == 'teacher')
@@ -92,112 +110,112 @@ model Lesson {
   @@deny('all', true)
 }
 
-model Activity {
-  id           String   @id @default(uuid())
-  title        String
-  instructions String
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+// model Activity {
+//   id           String   @id @default(uuid())
+//   title        String
+//   instructions String
+//   created_at   DateTime @default(now())
+//   updated_at   DateTime @updatedAt
 
-  lesson_id    String
-  lesson       Lesson   @relation(fields: [lesson_id], references: [id])
+//   lesson_id    String
+//   lesson       Lesson   @relation(fields: [lesson_id], references: [id])
 
-  created_by   String
-  creator      User     @relation("UserActivities", fields: [created_by], references: [id])
+//   created_by   String
+//   creator      User     @relation("UserActivities", fields: [created_by], references: [id])
 
-  choices      ActivityChoice[]
+//   choices      ActivityChoice[]
 
-  submissions  ActivitySubmission[]
+//   submissions  ActivitySubmission[]
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('create', auth().role == 'teacher')
-  @@allow('update', auth().role == 'teacher' && creator.id == auth().id)
-  @@allow('delete', auth().role == 'teacher' && creator.id == auth().id)
-  @@allow('read', true)
-  @@deny('all', true)
-}
+//   @@allow('all', auth().role == 'admin')
+//   @@allow('create', auth().role == 'teacher')
+//   @@allow('update', auth().role == 'teacher' && creator.id == auth().id)
+//   @@allow('delete', auth().role == 'teacher' && creator.id == auth().id)
+//   @@allow('read', true)
+//   @@deny('all', true)
+// }
 
-model ActivitySubmission {
-  id            String   @id @default(uuid())
-  answer_text   String?
-  file_url      String?
-  submitted_at  DateTime @default(now())
-  graded        Boolean  @default(false)
-  grade         Int?
+// model ActivitySubmission {
+//   id            String   @id @default(uuid())
+//   answer_text   String?
+//   file_url      String?
+//   submitted_at  DateTime @default(now())
+//   graded        Boolean  @default(false)
+//   grade         Int?
 
-  activity_id   String
-  activity      Activity @relation(fields: [activity_id], references: [id])
+//   activity_id   String
+//   activity      Activity @relation(fields: [activity_id], references: [id])
 
-  student_id    String
-  student       User     @relation(fields: [student_id], references: [id])
+//   student_id    String
+//   student       User     @relation(fields: [student_id], references: [id])
 
-  answers       ActivityAnswer[]
+//   answers       ActivityAnswer[]
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('create', auth().role == 'student')
-  @@allow('update', auth().id == student_id) // students can update their own submissions
-  @@allow('read', auth().role == 'teacher' && activity.creator.id == auth().id)
-  @@allow('read', auth().id == student_id) // students can see their own submissions
-  @@deny('all', true)
-}
+//   @@allow('all', auth().role == 'admin')
+//   @@allow('create', auth().role == 'student')
+//   @@allow('update', auth().id == student_id) // students can update their own submissions
+//   @@allow('read', auth().role == 'teacher' && activity.creator.id == auth().id)
+//   @@allow('read', auth().id == student_id) // students can see their own submissions
+//   @@deny('all', true)
+// }
 
-model ActivityLog {
-  id         String     @id @default(uuid())
-  action     LogAction
-  target_id  String?
-  timestamp  DateTime   @default(now())
+// model ActivityLog {
+//   id         String     @id @default(uuid())
+//   action     LogAction
+//   target_id  String?
+//   timestamp  DateTime   @default(now())
 
-  user_id    String
-  user       User       @relation(fields: [user_id], references: [id])
+//   user_id    String
+//   user       User       @relation(fields: [user_id], references: [id])
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('read', auth().id == user_id)
-  @@deny('all', true)
-}
+//   @@allow('all', auth().role == 'admin')
+//   @@allow('read', auth().id == user_id)
+//   @@deny('all', true)
+// }
 
-model ActivityChoice {
-  id           String       @id @default(uuid())
-  type         ChoiceType
-  content      String       // text content or image URL depending on type
-  is_correct   Boolean      @default(false)
-  created_at   DateTime     @default(now())
-  updated_at   DateTime     @updatedAt
+// model ActivityChoice {
+//   id           String       @id @default(uuid())
+//   type         ChoiceType
+//   content      String       // text content or image URL depending on type
+//   is_correct   Boolean      @default(false)
+//   created_at   DateTime     @default(now())
+//   updated_at   DateTime     @updatedAt
 
-  activity_id  String
-  activity     Activity     @relation(fields: [activity_id], references: [id])
+//   activity_id  String
+//   activity     Activity     @relation(fields: [activity_id], references: [id])
 
-  created_by   String
-  creator      User         @relation(fields: [created_by], references: [id])
+//   created_by   String
+//   creator      User         @relation(fields: [created_by], references: [id])
 
-  answers      ActivityAnswer[]
+//   answers      ActivityAnswer[]
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('create', auth().role == 'teacher')
-  @@allow('update', auth().role == 'teacher' && creator.id == auth().id)
-  @@allow('delete', auth().role == 'teacher' && creator.id == auth().id)
-  @@allow('read', true)
-  @@deny('all', true)
-}
+//   @@allow('all', auth().role == 'admin')
+//   @@allow('create', auth().role == 'teacher')
+//   @@allow('update', auth().role == 'teacher' && creator.id == auth().id)
+//   @@allow('delete', auth().role == 'teacher' && creator.id == auth().id)
+//   @@allow('read', true)
+//   @@deny('all', true)
+// }
 
-model ActivityAnswer {
-  id            String       @id @default(uuid())
-  submitted_at  DateTime     @default(now())
+// model ActivityAnswer {
+//   id            String       @id @default(uuid())
+//   submitted_at  DateTime     @default(now())
 
-  // For multiple choice: store selected choice(s)
-  choice_id     String?
-  choice        ActivityChoice? @relation(fields: [choice_id], references: [id])
+//   // For multiple choice: store selected choice(s)
+//   choice_id     String?
+//   choice        ActivityChoice? @relation(fields: [choice_id], references: [id])
 
-  // For open-ended: store text or file
-  answer_text   String?
-  file_url      String?
+//   // For open-ended: store text or file
+//   answer_text   String?
+//   file_url      String?
 
-  submission_id   String
-  submission      ActivitySubmission     @relation(fields: [submission_id], references: [id])
+//   submission_id   String
+//   submission      ActivitySubmission     @relation(fields: [submission_id], references: [id])
 
-  @@allow('all', auth().role == 'admin')
-  @@allow('create', auth().role == 'student')
-  @@allow('update', auth().id == submission.student.id) // students can update their own answers
-  @@allow('read', auth().role == 'teacher' && submission.activity.creator.id == auth().id)
-  @@allow('read', auth().id == submission.student.id) // students can view their own answers
-  @@deny('all', true)
-}
+//   @@allow('all', auth().role == 'admin')
+//   @@allow('create', auth().role == 'student')
+//   @@allow('update', auth().id == submission.student.id) // students can update their own answers
+//   @@allow('read', auth().role == 'teacher' && submission.activity.creator.id == auth().id)
+//   @@allow('read', auth().id == submission.student.id) // students can view their own answers
+//   @@deny('all', true)
+// }
