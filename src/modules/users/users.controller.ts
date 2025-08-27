@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 
-// @UseGuards(AuthGuard)
+@UseGuards(AuthGuard)
 @Controller('users')
 export class UsersController {
     constructor(private readonly service: UsersService) {}
@@ -22,4 +22,20 @@ export class UsersController {
     fetchStudentTeacher(){
         return this.service.fetchStudentTeacher()
     }
+    
+    @Get('/teachers')
+    findTeachers(){
+        return this.service.findTeachers()
+    }
+
+    @Get('/available-students')
+    findAvailableStudents(){
+        return this.service.findAvailableStudents()
+    }
+
+    @Get(':id')
+    findOne(@Param('id') id: string){
+        return this.service.findOne(id)
+    }
+
 }

@@ -42,6 +42,8 @@ model User {
   username         String    @unique()
   password_hash    String
   role             String
+  age              Int?
+  condition        String?
   avatar           String?
   nickname         String?
   gender           Gender?
@@ -57,6 +59,8 @@ model User {
 model Section {
   id         String    @id() @default(uuid())
   name       String    @unique()
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt()
   teacher_id String
   teacher    User      @relation("SectionTeacher", fields: [teacher_id], references: [id])
   subjects   Subject[] @relation("SectionSubjects")
@@ -67,7 +71,7 @@ model Subject {
   id                String    @id() @default(uuid())
   title             String
   description       String?
-  image             String
+  image             String?
   created_at        DateTime  @default(now())
   updated_at        DateTime  @updatedAt()
   assigned_sections Section[] @relation("SectionSubjects")

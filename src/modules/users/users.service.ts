@@ -53,19 +53,55 @@ export class UsersService {
     if (role !== 'admin') {
       throw new UnauthorizedException()
     }
-    const students = await this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
-        role: 'student'
-      }
-    })
-    const teachers = await this.prisma.user.findMany({
-      where: {
-        role: 'teacher'
-      }
+        OR: [
+          { role: 'student' },
+          { role: 'teacher' }
+        ]
+      },
+      orderBy: { full_name: 'asc' }
     })
 
-    const data = [...students, ...teachers]
-    console.log('fetch student teacher', {data})
-    return data
+    return users
   }
+
+
+  async findOne(id: string){
+    const user = await this.prisma.user.findFirst({
+      where: { id },
+      include: {
+        assigned_section: true,
+        sections_taught: true
+      }
+    })
+    
+    if(!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND)
+    }
+
+    return user
+  }
+
+  async findTeachers(): Promise<User[]> {
+    const teachers = this.prisma.user.findMany({
+      where: { role: 'teacher' },
+      orderBy: { full_name: 'asc' }
+    })
+    console.log(teachers)
+    return teachers
+  }
+
+  async findAvailableStudents(): Promise<User[]> {
+    const students = this.prisma.user.findMany({
+      where: { 
+        role: 'student', 
+        assigned_section:  {none: {} }
+      },
+      orderBy: { full_name: 'asc' }
+    })
+    console.log(students)
+    return students
+  }
+
 }

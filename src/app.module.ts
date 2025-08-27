@@ -7,6 +7,8 @@ import { UsersModule } from './modules/users/users.module';
 import { ZenstackModule } from './zenstack.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SectionModule } from './modules/section/section.module';
+import { SubjectModule } from './modules/subject/subject.module';
+import { GuardianModule } from './modules/guardian/guardian.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { SectionModule } from './modules/section/section.module';
     ZenstackModule,
     AuthModule,
     SectionModule,
+    SubjectModule,
+    GuardianModule
   ],
   controllers: [],
   providers: [
