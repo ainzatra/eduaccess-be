@@ -50,18 +50,27 @@ export class UsersService {
 
   async fetchStudentTeacher(): Promise<User[] | null> {
     const { role } = this.cls.get('auth')
+
     if (role !== 'admin') {
       throw new UnauthorizedException()
     }
-    const users = await this.prisma.user.findMany({
+
+    const students = await this.prisma.user.findMany({
       where: {
-        OR: [
-          { role: 'student' },
-          { role: 'teacher' }
-        ]
+        role: 'student' 
       },
-      orderBy: { full_name: 'asc' }
+      orderBy: { full_name: 'asc' },
+
     })
+
+    const teachers = await this.prisma.user.findMany({
+      where: {
+        role: 'teacher' 
+      },
+      orderBy: { full_name: 'asc' },
+
+    })
+    const users = [...students, ...teachers]
 
     return users
   }
@@ -104,4 +113,18 @@ export class UsersService {
     return students
   }
 
+  async countStudentTeacher() {
+    const studentCount = this.prisma.user.count({
+      where: {
+        role: 'student'
+      }
+    })
+    const teacherCount = this.prisma.user.count({
+      where: {
+        role: 'teacher'
+      }
+    })
+
+    return { student: studentCount, teacher: teacherCount }
+  }
 }

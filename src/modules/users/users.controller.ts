@@ -22,6 +22,11 @@ export class UsersController {
     fetchStudentTeacher(){
         return this.service.fetchStudentTeacher()
     }
+
+    @Get('/studentteacher/count')
+    countStudentTeacher(){
+        return this.service.countStudentTeacher()
+    }
     
     @Get('/teachers')
     findTeachers(){
