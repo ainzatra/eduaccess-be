@@ -54,6 +54,7 @@ model User {
   sections_taught  Section[] @relation("SectionTeacher")
   assigned_section Section[] @relation("SectionStudents")
   guardian         Guardian?
+  todos            Todo[]
 }
 
 model Section {
@@ -98,4 +99,12 @@ model Guardian {
   contact    String
   student_id String @unique()
   student    User   @relation(fields: [student_id], references: [id])
+}
+
+model Todo {
+  id         String  @id() @default(uuid())
+  title      String
+  completed  Boolean @default(false)
+  teacher_id String
+  teacher    User    @relation(fields: [teacher_id], references: [id])
 }

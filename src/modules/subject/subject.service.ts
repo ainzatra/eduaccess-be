@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Subject } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
@@ -59,6 +59,8 @@ export class SubjectService {
     }
  
     async delete(ids: string[]) {
+        if (!ids) throw new BadRequestException('No subjects to delete')
+            
         return this.prisma.subject.deleteMany({
             where: { id: { in: ids } }
         })

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards, Put } from '@nestjs/common';
 import { SectionService } from './section.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
@@ -19,9 +19,9 @@ export class SectionController {
         return this.service.create(data)
     }
 
-    @Post('/update-teacher/:id')
-    updateTeacher(@Body() data: { teacher_id: string }, @Param('id') id: string) {
-        return this.service.updateTeacher( data.teacher_id, id)
+    @Put('/update-teacher/:id')
+    updateTeacher(@Body() data: { teacher: string }, @Param('id') id: string) {
+        return this.service.updateTeacher( data.teacher, id)
     }
 
     @Post('/add-subjects/:id')
@@ -30,7 +30,7 @@ export class SectionController {
     }
 
     @Post('/add-students/:id')
-    addStudents(@Body() data: AddStudentDto, @Param('id') id: string) {
+    addStudents(@Body() data, @Param('id') id: string) {
         return this.service.addStudents(data, id)
     }
 
@@ -40,13 +40,13 @@ export class SectionController {
     }
 
     @Delete('/remove-subject/:id')
-    deleteSubject(@Param('id') id: string, @Body() body: { subjectId: string }) {
-        return this.service.deleteSubject(id, body.subjectId)
+    deleteSubject(@Param('id') id: string, @Body() body: { subject: string }) {
+        return this.service.deleteSubject(id, body.subject)
     }
 
     @Delete('/remove-student/:id')
-    deleteStudent(@Param('id') id: string, @Body() body: { studentId: string }) {
-        return this.service.deleteStudent(id, body.studentId)
+    deleteStudent(@Param('id') id: string, @Body() body: { student: string }) {
+        return this.service.deleteStudent(id, body.student)
     }
 
     @Get(':id')

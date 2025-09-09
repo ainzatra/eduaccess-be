@@ -15,7 +15,9 @@ type TokenPayload = {
   token: string;
   id: string;
   username: string;
-  role: string
+  role: string;
+  avatar: string | null;
+  full_name: string
 };
 
 @Injectable()
@@ -43,6 +45,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid username or password2');
 
     const payload = await this.generateJWT(user);
+    console.log('login', payload)
     return { message: 'Login success', ...payload };
   }
 
@@ -51,17 +54,30 @@ export class AuthService {
       sub: user.id,
       username: user.username,
       name: user.full_name,
-      role: user.role
+      role: user.role,
+      avatar: user.avatar,
+      full_name: user.full_name
     };
 
     const token = await this.jwtService.signAsync(tokenPayload);
 
-    return { token, id: user.id, username: user.username, role: user.role };
+    return { token, id: user.id, username: user.username, role: user.role, avatar: user.avatar, full_name: user.full_name };
   }
 
   async verifyJwtToken(token: string): Promise<TokenPayload> {
     const result = await this.jwtService.decode(token);
-    return result;
+    const user = await this.service.findOne(result.sub)
+    // create new token to update new user info
+    const tokenPayload = {
+      sub: user.id,
+      username: user.username,
+      name: user.full_name,
+      role: user.role,
+      avatar: user.avatar,
+      full_name: user.full_name
+    };
+    const newToken = await this.jwtService.signAsync(tokenPayload) 
+    return { token: newToken, id: user.id, username: user.username, role: user.role, avatar: user.avatar, full_name: user.full_name };
   }
 
   async refresh(): Promise<TokenPayload> {

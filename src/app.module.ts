@@ -9,28 +9,31 @@ import { AuthModule } from './modules/auth/auth.module';
 import { SectionModule } from './modules/section/section.module';
 import { SubjectModule } from './modules/subject/subject.module';
 import { GuardianModule } from './modules/guardian/guardian.module';
+import { TodoModule } from './modules/todo/todo.module';
 
 @Module({
-  imports: [
-    ClsModule.forRoot({
-      global: true,
-      middleware: {
-        mount: true,
-      },
-    }),
-    UsersModule,
-    ZenstackModule,
-    AuthModule,
-    SectionModule,
-    SubjectModule,
-    GuardianModule
-  ],
-  controllers: [],
-  providers: [
-    PrismaService,
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: AuthInterceptor,
-    },],
+    imports: [
+        ClsModule.forRoot({
+            global: true,
+            middleware: {
+                mount: true,
+            },
+        }),
+        UsersModule,
+        ZenstackModule,
+        AuthModule,
+        SectionModule,
+        SubjectModule,
+        GuardianModule,
+        TodoModule,
+    ],
+    controllers: [],
+    providers: [
+        PrismaService,
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: AuthInterceptor,
+        },
+    ],
 })
 export class AppModule {}

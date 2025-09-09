@@ -39,21 +39,22 @@ export class SectionService {
         })
     }
 
-    async addStudents(data: AddStudentDto, id: string) {
+    async addStudents(data, id: string) {
         return this.prisma.section.update({
             where: { id },
             data: {
-                students: { connect: data.ids.map((studentId) => ({ id: studentId })) }
+                students: { connect: data.map((studentId) => ({ id: studentId })) }
             },
             include: { students: true }
         })
     }
 
     async addSubjects(data, id: string) {
+        console.log('add subject', data)
         return this.prisma.section.update({
             where: { id },
             data: {
-                subjects: { connect: data.ids.map((subjectId) => ({ id: subjectId })) }
+                subjects: { connect: data.map((subjectId) => ({ id: subjectId })) }
             },
             include: { subjects: true }
         })

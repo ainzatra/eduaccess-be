@@ -7,9 +7,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from './guard/auth.guard';
 import { UsersModule } from 'src/modules/users/users.module';
 import { UsersService } from '../users/users.service';
+import { S3Service } from '../s3.service';
 
 @Module({
-  providers: [AuthService, PrismaService, AuthGuard, UsersService],
+  providers: [AuthService, PrismaService, AuthGuard, UsersService, S3Service],
   imports: [
     ZenstackModule,
     JwtModule.register({
