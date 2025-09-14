@@ -82,7 +82,7 @@ model Subject {
 model Lesson {
   id           String   @id() @default(uuid())
   title        String
-  video_url    String
+  video_url    String?
   subtitle_url String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt()

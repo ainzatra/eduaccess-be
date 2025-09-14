@@ -1,0 +1,27 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/prisma.service';
+
+@Injectable()
+export class TeacherService {
+    constructor(private readonly prisma: PrismaService) {}
+
+    async fetchMySection(id: string) {
+        console.log('Fetching teacher section');
+        const section = await this.prisma.section.findFirst({
+            where: {
+                teacher_id: id,
+            },
+            include: {
+                subjects: {
+                    orderBy: {
+                        title: 'asc',
+                    },
+                },
+                students: true,
+            },
+        });
+
+        if (!section) throw new NotFoundException();
+        return section;
+    }
+}

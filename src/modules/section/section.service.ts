@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Section } from '@prisma/client';
 import { ENHANCED_PRISMA } from '@zenstackhq/server/nestjs';
 import { PrismaService } from 'src/prisma.service';
@@ -10,7 +10,7 @@ export class SectionService {
     constructor(private readonly prisma: PrismaService) {}
 
     async create(data: CreateSectionDto): Promise<Section> {
-        return this.prisma.section.create({ data })
+        return this.prisma.section.create({ data });
     }
 
     async findAllTable(): Promise<Section[]> {
@@ -18,11 +18,11 @@ export class SectionService {
             include: {
                 teacher: true,
                 _count: {
-                    select: { students: true, subjects: true},
-                }
+                    select: { students: true, subjects: true },
+                },
             },
-            orderBy: { name: 'asc' }
-        })
+            orderBy: { name: 'asc' },
+        });
     }
 
     async findOne(id: string) {
@@ -33,82 +33,88 @@ export class SectionService {
                 students: true,
                 subjects: true,
                 _count: {
-                    select: { students: true, subjects: true},
-                }
-            }
-        })
+                    select: { students: true, subjects: true },
+                },
+            },
+        });
     }
 
     async addStudents(data, id: string) {
         return this.prisma.section.update({
             where: { id },
             data: {
-                students: { connect: data.map((studentId) => ({ id: studentId })) }
+                students: {
+                    connect: data.map((studentId) => ({ id: studentId })),
+                },
             },
-            include: { students: true }
-        })
+            include: { students: true },
+        });
     }
 
     async addSubjects(data, id: string) {
-        console.log('add subject', data)
+        console.log('add subject', data);
         return this.prisma.section.update({
             where: { id },
             data: {
-                subjects: { connect: data.map((subjectId) => ({ id: subjectId })) }
+                subjects: {
+                    connect: data.map((subjectId) => ({ id: subjectId })),
+                },
             },
-            include: { subjects: true }
-        })
+            include: { subjects: true },
+        });
     }
 
     async updateTeacher(teacher_id, id: string) {
         return this.prisma.section.update({
             where: { id },
             data: {
-                teacher_id: teacher_id
+                teacher_id: teacher_id,
             },
-            include: { teacher: true }
-        })
+            include: { teacher: true },
+        });
     }
 
     async findAvailableSubjects(id: string) {
         const section = await this.prisma.section.findUnique({
             where: { id },
-            include: { subjects: true }
-        })
+            include: { subjects: true },
+        });
 
-        if(!section) {
-            throw new Error('Section not found')
+        if (!section) {
+            throw new Error('Section not found');
         }
 
-        const assignedSubjectIds = section.subjects.map((subject) => subject.id)
+        const assignedSubjectIds = section.subjects.map(
+            (subject) => subject.id,
+        );
 
         return this.prisma.subject.findMany({
             where: {
                 NOT: {
-                    id: { in: assignedSubjectIds }
-                }
+                    id: { in: assignedSubjectIds },
+                },
             },
-            orderBy: { title: 'asc' }
-        })
+            orderBy: { title: 'asc' },
+        });
     }
 
     async deleteSubject(id: string, subject_id: string) {
         return this.prisma.section.update({
             where: { id },
             data: {
-                subjects: { disconnect: { id: subject_id } }
+                subjects: { disconnect: { id: subject_id } },
             },
-            include: { subjects: true }
-        })
+            include: { subjects: true },
+        });
     }
 
     async deleteStudent(id: string, student_id: string) {
         return this.prisma.section.update({
             where: { id },
             data: {
-                students: { disconnect: { id: student_id } }
+                students: { disconnect: { id: student_id } },
             },
-            include: { students: true }
-        })
+            include: { students: true },
+        });
     }
 }

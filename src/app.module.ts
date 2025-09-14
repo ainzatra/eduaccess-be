@@ -10,6 +10,9 @@ import { SectionModule } from './modules/section/section.module';
 import { SubjectModule } from './modules/subject/subject.module';
 import { GuardianModule } from './modules/guardian/guardian.module';
 import { TodoModule } from './modules/todo/todo.module';
+import { StudentModule } from './modules/student/student.module';
+import { TeacherModule } from './modules/teacher/teacher.module';
+import { LessonModule } from './modules/lesson/lesson.module';
 
 @Module({
     imports: [
@@ -26,6 +29,9 @@ import { TodoModule } from './modules/todo/todo.module';
         SubjectModule,
         GuardianModule,
         TodoModule,
+        StudentModule,
+        TeacherModule,
+        LessonModule,
     ],
     controllers: [],
     providers: [

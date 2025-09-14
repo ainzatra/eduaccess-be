@@ -110,11 +110,14 @@ export class UsersService {
     }
 
     async findTeachers(): Promise<User[]> {
-        const teachers = this.prisma.user.findMany({
-            where: { role: 'teacher' },
+        const teachers = await this.prisma.user.findMany({
+            where: {
+                role: 'teacher',
+                sections_taught: { none: {} },
+            },
             orderBy: { full_name: 'asc' },
         });
-        console.log(teachers);
+        console.log('available teachers:', teachers.length);
         return teachers;
     }
 

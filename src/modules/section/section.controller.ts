@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards, Put } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Post,
+    UseGuards,
+    Put,
+} from '@nestjs/common';
 import { SectionService } from './section.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
@@ -11,47 +20,46 @@ export class SectionController {
 
     @Get()
     findAll() {
-        return this.service.findAllTable()
+        return this.service.findAllTable();
     }
 
     @Post()
     create(@Body() data: CreateSectionDto) {
-        return this.service.create(data)
+        return this.service.create(data);
     }
 
     @Put('/update-teacher/:id')
     updateTeacher(@Body() data: { teacher: string }, @Param('id') id: string) {
-        return this.service.updateTeacher( data.teacher, id)
+        return this.service.updateTeacher(data.teacher, id);
     }
 
     @Post('/add-subjects/:id')
     addSubjects(@Body() data, @Param('id') id: string) {
-        return this.service.addSubjects(data, id)
+        return this.service.addSubjects(data, id);
     }
 
     @Post('/add-students/:id')
     addStudents(@Body() data, @Param('id') id: string) {
-        return this.service.addStudents(data, id)
+        return this.service.addStudents(data, id);
     }
 
     @Get('/available-subjects/:id')
     findAvailableSubjects(@Param('id') id: string) {
-        return this.service.findAvailableSubjects(id)
+        return this.service.findAvailableSubjects(id);
     }
 
     @Delete('/remove-subject/:id')
     deleteSubject(@Param('id') id: string, @Body() body: { subject: string }) {
-        return this.service.deleteSubject(id, body.subject)
+        return this.service.deleteSubject(id, body.subject);
     }
 
     @Delete('/remove-student/:id')
     deleteStudent(@Param('id') id: string, @Body() body: { student: string }) {
-        return this.service.deleteStudent(id, body.student)
+        return this.service.deleteStudent(id, body.student);
     }
 
     @Get(':id')
     findOne(@Param('id') id: string) {
-        return this.service.findOne(id)
+        return this.service.findOne(id);
     }
-    
 }
