@@ -25,6 +25,11 @@ export class UsersService {
     ) {}
 
     async create(body): Promise<User> {
+        const user = await this.prisma.user.findUnique({
+            where: { username: body.username },
+        });
+
+        if (user) throw new BadRequestException('Username already used');
         if (
             body.password &&
             body.confirm_password &&

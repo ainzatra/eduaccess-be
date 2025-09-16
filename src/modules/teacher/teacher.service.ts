@@ -21,7 +21,10 @@ export class TeacherService {
             },
         });
 
-        if (!section) throw new NotFoundException();
+        if (!section)
+            throw new NotFoundException(
+                'Teacher is not assigned to any section yet',
+            );
         return section;
     }
 }

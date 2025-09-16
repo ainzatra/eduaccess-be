@@ -25,7 +25,7 @@ export class StudentService {
             },
         });
 
-        if (!section) throw new NotFoundException();
+        if (!section) throw new NotFoundException('Student not enrolled yet');
         return section;
     }
 }
