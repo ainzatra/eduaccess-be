@@ -26,6 +26,12 @@ enum LogAction {
     submit_activity
 }
 
+enum ActivityLevel {
+    beginner
+    intermediate
+    advance
+}
+
 enum Gender {
   male
   female
@@ -64,6 +70,9 @@ model User {
     // Teacher Todos
     todos Todo[]
 
+    // Teacher Created Activities
+    created_activities Activity[]
+
     // activities    Activity[]      @relation("UserActivities")
     // submissions   ActivitySubmission[]
     // logs          ActivityLog[]
@@ -86,6 +95,7 @@ model Section {
 
     subjects   Subject[] @relation('SectionSubjects')
     students   User[]    @relation('SectionStudents')
+    activities Activity[]
 
     @@allow('all', auth().role == 'admin')
     @@allow('read', auth().role == 'student' || auth().role == 'teacher')
@@ -103,6 +113,7 @@ model Subject {
     assigned_sections Section[] @relation('SectionSubjects')
 
     lessons           Lesson[]
+    activities        Activity[]
 
     @@allow('create', auth().role == 'admin') // admins can create users
     @@allow('all', auth().role == 'admin')
@@ -151,22 +162,30 @@ model Todo {
     teacher User @relation(fields: [teacher_id], references: [id])
 }
 
-// model Activity {
-//   id           String   @id @default(uuid())
-//   title        String
-//   instructions String
-//   created_at   DateTime @default(now())
-//   updated_at   DateTime @updatedAt
+model Activity {
+  id           String   @id @default(uuid())
+  title        String
+  titleAudio   String?
+  instructions String
+  instructionsAudio String?
+  questions       String
+  level        ActivityLevel
+  graded       Boolean  @default(false)
 
-//   lesson_id    String
-//   lesson       Lesson   @relation(fields: [lesson_id], references: [id])
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 
-//   created_by   String
-//   creator      User     @relation("UserActivities", fields: [created_by], references: [id])
+  subject_id   String
+  subject      Subject  @relation(fields: [subject_id], references: [id])
 
-//   choices      ActivityChoice[]
+  section_id   String
+  section      Section  @relation(fields: [section_id], references: [id])
+
+  teacher_id   String
+  teacher      User  @relation(fields: [teacher_id], references: [id])
 
 //   submissions  ActivitySubmission[]
+  
 
 //   @@allow('all', auth().role == 'admin')
 //   @@allow('create', auth().role == 'teacher')
@@ -174,15 +193,13 @@ model Todo {
 //   @@allow('delete', auth().role == 'teacher' && creator.id == auth().id)
 //   @@allow('read', true)
 //   @@deny('all', true)
-// }
+}
 
 // model ActivitySubmission {
 //   id            String   @id @default(uuid())
-//   answer_text   String?
-//   file_url      String?
 //   submitted_at  DateTime @default(now())
-//   graded        Boolean  @default(false)
-//   grade         Int?
+//   score         Int
+//   schema        String
 
 //   activity_id   String
 //   activity      Activity @relation(fields: [activity_id], references: [id])
@@ -190,14 +207,12 @@ model Todo {
 //   student_id    String
 //   student       User     @relation(fields: [student_id], references: [id])
 
-//   answers       ActivityAnswer[]
-
-//   @@allow('all', auth().role == 'admin')
-//   @@allow('create', auth().role == 'student')
-//   @@allow('update', auth().id == student_id) // students can update their own submissions
-//   @@allow('read', auth().role == 'teacher' && activity.creator.id == auth().id)
-//   @@allow('read', auth().id == student_id) // students can see their own submissions
-//   @@deny('all', true)
+// //   @@allow('all', auth().role == 'admin')
+// //   @@allow('create', auth().role == 'student')
+// //   @@allow('update', auth().id == student_id) // students can update their own submissions
+// //   @@allow('read', auth().role == 'teacher' && activity.creator.id == auth().id)
+// //   @@allow('read', auth().id == student_id) // students can see their own submissions
+// //   @@deny('all', true)
 // }
 
 // model ActivityLog {

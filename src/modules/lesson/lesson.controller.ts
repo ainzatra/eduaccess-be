@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
     Param,
     Post,
@@ -40,5 +41,10 @@ export class LessonController {
     @Get(':id')
     fetchLesson(@Param('id') id: string) {
         return this.service.findLesson(id);
+    }
+
+    @Delete(':id')
+    deleteLesson(@Param('id') id: string) {
+        return this.service.deleteLesson(id);
     }
 }

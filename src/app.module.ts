@@ -13,6 +13,7 @@ import { TodoModule } from './modules/todo/todo.module';
 import { StudentModule } from './modules/student/student.module';
 import { TeacherModule } from './modules/teacher/teacher.module';
 import { LessonModule } from './modules/lesson/lesson.module';
+import { ActivityModule } from './modules/activity/activity.module';
 
 @Module({
     imports: [
@@ -32,6 +33,7 @@ import { LessonModule } from './modules/lesson/lesson.module';
         StudentModule,
         TeacherModule,
         LessonModule,
+        ActivityModule,
     ],
     controllers: [],
     providers: [
