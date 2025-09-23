@@ -1,0 +1,29 @@
+version: 0.2
+env:
+  variables:
+    AWS_DEFAULT_REGION: ap-southeast-1
+    AWS_ACCOUNT_ID: ""
+    BACKEND_ECR_REPO: eduaccess/backend
+    VITE_BACKEND_URL: ""
+phases:
+  install:
+    commands:
+      - echo "Install phase - nothing to install for docker-based build"
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws --version
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+      - echo "Ensuring ECR repositories exist..."
+      - aws ecr describe-repositories --repository-names "$BACKEND_ECR_REPO" --region "$AWS_DEFAULT_REGION" || aws ecr create-repository --repository-name "$BACKEND_ECR_REPO" --region "$AWS_DEFAULT_REGION"
+      - export BACKEND_IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$BACKEND_ECR_REPO:latest"
+  build:
+    commands:
+      - echo "Building backend image..."
+      - echo "Skipping for now..."
+      - docker build -t "$BACKEND_IMAGE" .
+  post_build:
+    commands:
+      - echo "Pushing backend image $BACKEND_IMAGE"
+      - docker push "$BACKEND_IMAGE"
+      - echo "Build completed on $(date)"
