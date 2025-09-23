@@ -5,6 +5,7 @@ import {
     Delete,
     Get,
     Param,
+    Patch,
     Post,
     Query,
     UploadedFiles,
@@ -66,7 +67,7 @@ export class ActivityController {
         @Body() body,
         @UploadedFiles()
         files: {
-            audio?: Express.Multer.File[];
+            audios?: Express.Multer.File[];
             images?: Express.Multer.File[];
         },
     ) {
@@ -75,7 +76,7 @@ export class ActivityController {
         console.log(schema);
         console.log('Questions:', schema.questions);
 
-        console.log('Audio files:', files.audio);
+        console.log('Audio files:', files.audios);
         console.log('Image files:', files.images);
 
         return this.service.createActivity(body, files);
@@ -89,9 +90,28 @@ export class ActivityController {
         return this.service.fetchSubjectActivities(id, subject);
     }
 
-    @Post('submit/:id')
-    submitActivity(@Param('id') id: string, @Body() body) {
-        console.log('submit activity', id, body);
+    @Post('submit/:studentId')
+    submitActivity(@Param('studentId') studentId: string, @Body() body) {
+        console.log('submit activity', studentId, body);
+        return this.service.submitActivity(studentId, body);
+    }
+
+    @Get('submissions/:activityId')
+    fetchActivitySubmissions(@Param('activityId') activityId: string) {
+        return this.service.fetchActivitySubmissions(activityId);
+    }
+
+    @Get('submission/:submissionId')
+    fetchActivitySubmission(@Param('submissionId') submissionId: string) {
+        return this.service.fetchActivitySubmission(submissionId);
+    }
+
+    @Patch('/submission/:submissionId/grade')
+    setSubmissionGrade(
+        @Param('submissionId') submissionId: string,
+        @Body() body: { score: number },
+    ) {
+        return this.service.setSubmissionGrade(submissionId, body.score);
     }
 
     @Get(':id')

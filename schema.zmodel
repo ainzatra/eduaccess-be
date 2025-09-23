@@ -38,6 +38,11 @@ enum Gender {
   other
 }
 
+enum SubmissionStatus {
+    graded
+    pending
+}
+
 model User {
     id               String    @id @default(uuid())
     full_name        String
@@ -74,7 +79,7 @@ model User {
     created_activities Activity[]
 
     // activities    Activity[]      @relation("UserActivities")
-    // submissions   ActivitySubmission[]
+    submissions   ActivitySubmission[]
     // logs          ActivityLog[]
 
     @@allow('all', auth().role == 'admin')           // Admins can do everything
@@ -184,7 +189,7 @@ model Activity {
   teacher_id   String
   teacher      User  @relation(fields: [teacher_id], references: [id])
 
-//   submissions  ActivitySubmission[]
+  submissions  ActivitySubmission[]
   
 
 //   @@allow('all', auth().role == 'admin')
@@ -195,25 +200,26 @@ model Activity {
 //   @@deny('all', true)
 }
 
-// model ActivitySubmission {
-//   id            String   @id @default(uuid())
-//   submitted_at  DateTime @default(now())
-//   score         Int
-//   schema        String
+model ActivitySubmission {
+  id            String   @id @default(uuid())
+  submitted_at  DateTime @default(now())
+  score         Int
+  schema        String
+  status        SubmissionStatus @default(pending)
 
-//   activity_id   String
-//   activity      Activity @relation(fields: [activity_id], references: [id])
+  activity_id   String
+  activity      Activity @relation(fields: [activity_id], references: [id])
 
-//   student_id    String
-//   student       User     @relation(fields: [student_id], references: [id])
+  student_id    String
+  student       User     @relation(fields: [student_id], references: [id])
 
-// //   @@allow('all', auth().role == 'admin')
-// //   @@allow('create', auth().role == 'student')
-// //   @@allow('update', auth().id == student_id) // students can update their own submissions
-// //   @@allow('read', auth().role == 'teacher' && activity.creator.id == auth().id)
-// //   @@allow('read', auth().id == student_id) // students can see their own submissions
-// //   @@deny('all', true)
-// }
+//   @@allow('all', auth().role == 'admin')
+//   @@allow('create', auth().role == 'student')
+//   @@allow('update', auth().id == student_id) // students can update their own submissions
+//   @@allow('read', auth().role == 'teacher' && activity.creator.id == auth().id)
+//   @@allow('read', auth().id == student_id) // students can see their own submissions
+//   @@deny('all', true)
+}
 
 // model ActivityLog {
 //   id         String     @id @default(uuid())

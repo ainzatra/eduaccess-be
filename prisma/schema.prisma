@@ -42,10 +42,15 @@ enum Gender {
   other
 }
 
+enum SubmissionStatus {
+  graded
+  pending
+}
+
 model User {
-  id                 String     @id() @default(uuid())
+  id                 String               @id() @default(uuid())
   full_name          String
-  username           String     @unique()
+  username           String               @unique()
   password_hash      String
   role               String
   age                Int?
@@ -53,15 +58,16 @@ model User {
   avatar             String?
   nickname           String?
   gender             Gender?
-  created_at         DateTime   @default(now())
-  updated_at         DateTime   @updatedAt()
-  email              String?    @unique()
-  lessons            Lesson[]   @relation("UserLessons")
-  sections_taught    Section[]  @relation("SectionTeacher")
-  assigned_section   Section[]  @relation("SectionStudents")
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt()
+  email              String?              @unique()
+  lessons            Lesson[]             @relation("UserLessons")
+  sections_taught    Section[]            @relation("SectionTeacher")
+  assigned_section   Section[]            @relation("SectionStudents")
   guardian           Guardian?
   todos              Todo[]
   created_activities Activity[]
+  submissions        ActivitySubmission[]
 }
 
 model Section {
@@ -119,20 +125,33 @@ model Todo {
 }
 
 model Activity {
-  id                String        @id() @default(uuid())
+  id                String               @id() @default(uuid())
   title             String
   titleAudio        String?
   instructions      String
   instructionsAudio String?
   questions         String
   level             ActivityLevel
-  graded            Boolean       @default(false)
-  created_at        DateTime      @default(now())
-  updated_at        DateTime      @updatedAt()
+  graded            Boolean              @default(false)
+  created_at        DateTime             @default(now())
+  updated_at        DateTime             @updatedAt()
   subject_id        String
-  subject           Subject       @relation(fields: [subject_id], references: [id])
+  subject           Subject              @relation(fields: [subject_id], references: [id])
   section_id        String
-  section           Section       @relation(fields: [section_id], references: [id])
+  section           Section              @relation(fields: [section_id], references: [id])
   teacher_id        String
-  teacher           User          @relation(fields: [teacher_id], references: [id])
+  teacher           User                 @relation(fields: [teacher_id], references: [id])
+  submissions       ActivitySubmission[]
+}
+
+model ActivitySubmission {
+  id           String           @id() @default(uuid())
+  submitted_at DateTime         @default(now())
+  score        Int
+  schema       String
+  status       SubmissionStatus @default(pending)
+  activity_id  String
+  activity     Activity         @relation(fields: [activity_id], references: [id])
+  student_id   String
+  student      User             @relation(fields: [student_id], references: [id])
 }
