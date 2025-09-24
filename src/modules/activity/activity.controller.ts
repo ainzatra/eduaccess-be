@@ -9,6 +9,7 @@ import {
     Post,
     Query,
     UploadedFiles,
+    UseGuards,
     UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -17,6 +18,9 @@ import {
 } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ActivityService } from './activity.service';
+import { AuthGuard } from '../auth/guard/auth.guard';
+
+@UseGuards(AuthGuard)
 @Controller('activity')
 export class ActivityController {
     constructor(private readonly service: ActivityService) {}

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ClsModule, ClsService } from 'nestjs-cls';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthInterceptor } from './modules/auth/auth.interceptor';
-import { PrismaService } from './prisma.service';
 import { UsersModule } from './modules/users/users.module';
 import { ZenstackModule } from './zenstack.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -17,6 +16,7 @@ import { ActivityModule } from './modules/activity/activity.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { EmailModule } from './modules/email/email.module';
 import { AnnouncementModule } from './modules/announcement/announcement.module';
+import { PrismaModule } from './modules/prisma/prisma.module';
 
 @Module({
     imports: [
@@ -40,10 +40,10 @@ import { AnnouncementModule } from './modules/announcement/announcement.module';
         NotificationModule,
         EmailModule,
         AnnouncementModule,
+        PrismaModule,
     ],
     controllers: [],
     providers: [
-        PrismaService,
         {
             provide: APP_INTERCEPTOR,
             useClass: AuthInterceptor,

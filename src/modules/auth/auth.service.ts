@@ -11,7 +11,7 @@ import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { ClsService } from 'nestjs-cls';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 
 type TokenPayload = {

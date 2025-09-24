@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Section } from '@prisma/client';
 import { ENHANCED_PRISMA } from '@zenstackhq/server/nestjs';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { AddStudentDto } from './dto/add-student.dto';
 

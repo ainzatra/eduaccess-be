@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from 'src/modules/prisma/prisma.service';
 
 @Injectable()
 export class StudentService {
@@ -49,5 +49,29 @@ export class StudentService {
         });
 
         return activities;
+    }
+
+    async fetchStudentDetails(id: string) {
+        const student = await this.prisma.user.findUnique({
+            where: { id, role: 'student' },
+        });
+
+        if (!student) throw new NotFoundException('Student not found');
+
+        const guardian = await this.prisma.guardian.findUnique({
+            where: { student_id: id },
+        });
+
+        const submissions = await this.prisma.activitySubmission.findMany({
+            where: {
+                student_id: id,
+            },
+            include: { activity: { select: { title: true, level: true } } },
+            orderBy: {
+                submitted_at: 'desc',
+            },
+        });
+
+        return { student, guardian, submissions };
     }
 }
