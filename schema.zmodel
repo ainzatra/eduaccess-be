@@ -95,8 +95,8 @@ model Section {
     created_at DateTime  @default(now())
     updated_at DateTime  @updatedAt
     
-    teacher_id String
-    teacher    User      @relation('SectionTeacher',  fields: [teacher_id], references: [id])
+    teacher_id String?
+    teacher    User?      @relation('SectionTeacher',  fields: [teacher_id], references: [id])
 
     subjects   Subject[] @relation('SectionSubjects')
     students   User[]    @relation('SectionStudents')

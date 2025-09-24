@@ -9,4 +9,9 @@ export class StudentController {
     fetchMySection(@Param('id') id: string) {
         return this.service.fetchMySection(id);
     }
+
+    @Get('activities/:id')
+    fetchMyActivities(@Param('id') id: string) {
+        return this.service.fetchMyActivities(id);
+    }
 }

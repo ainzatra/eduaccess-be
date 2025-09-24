@@ -58,6 +58,11 @@ export class SectionController {
         return this.service.deleteStudent(id, body.student);
     }
 
+    @Delete('remove-teacher/:id')
+    removeTeacher(@Param('id') id: string) {
+        return this.service.removeTeacher(id);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.service.findOne(id);

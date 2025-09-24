@@ -27,4 +27,22 @@ export class TeacherService {
             );
         return section;
     }
+
+    async fetchMyActivities(id: string) {
+        const section = await this.prisma.section.findFirst({
+            where: {
+                teacher_id: id,
+            },
+        });
+
+        if (!section) throw new NotFoundException('No section assigned');
+
+        const activities = await this.prisma.activity.findMany({
+            where: {
+                section_id: section.id,
+            },
+        });
+
+        return activities;
+    }
 }

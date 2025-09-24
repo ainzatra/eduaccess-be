@@ -28,14 +28,13 @@ export class ActivityService {
 
         const parsedSchema = JSON.parse(schema);
 
+        console.log({ parsedSchema });
+
         // Upload audio files to s3 first then return the url then paste the url in their respective audio places
         const updatedSchema =
             files.audios || files.images
                 ? await this.uploadActivityFiles(parsedSchema, files)
-                : {
-                      ...parsedSchema,
-                      questions: JSON.parse(parsedSchema.questions),
-                  };
+                : parsedSchema;
 
         const {
             subject: subject_id,
@@ -150,9 +149,7 @@ export class ActivityService {
             );
             if (!question) continue;
             if (question.type === 'multiple_choice') {
-                if (
-                    question.correctChoiceIds.includes(answer.selectedChoiceId)
-                ) {
+                if (question.correctChoiceIds === answer.selectedChoiceId) {
                     score += question.points;
                 }
             } else if (question.type === 'matching') {

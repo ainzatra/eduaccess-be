@@ -28,4 +28,26 @@ export class StudentService {
         if (!section) throw new NotFoundException('Student not enrolled yet');
         return section;
     }
+
+    async fetchMyActivities(id: string) {
+        const section = await this.prisma.section.findFirst({
+            where: {
+                students: {
+                    some: {
+                        id,
+                    },
+                },
+            },
+        });
+
+        if (!section) throw new NotFoundException('No section assigned');
+
+        const activities = await this.prisma.activity.findMany({
+            where: {
+                section_id: section.id,
+            },
+        });
+
+        return activities;
+    }
 }

@@ -117,4 +117,13 @@ export class SectionService {
             include: { students: true },
         });
     }
+
+    async removeTeacher(id: string) {
+        return this.prisma.section.update({
+            where: { id },
+            data: {
+                teacher_id: null,
+            },
+        });
+    }
 }
