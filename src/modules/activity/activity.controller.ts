@@ -62,7 +62,7 @@ export class ActivityController {
                     }
                 },
                 limits: {
-                    fileSize: 10 * 1024 * 1024, // 10MB per file
+                    fileSize: 100 * 1024 * 1024, // 10MB per file
                 },
             },
         ),
