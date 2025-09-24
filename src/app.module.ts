@@ -16,6 +16,7 @@ import { LessonModule } from './modules/lesson/lesson.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { EmailModule } from './modules/email/email.module';
+import { AnnouncementModule } from './modules/announcement/announcement.module';
 
 @Module({
     imports: [
@@ -38,6 +39,7 @@ import { EmailModule } from './modules/email/email.module';
         ActivityModule,
         NotificationModule,
         EmailModule,
+        AnnouncementModule,
     ],
     controllers: [],
     providers: [
