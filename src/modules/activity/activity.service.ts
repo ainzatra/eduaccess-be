@@ -149,7 +149,7 @@ export class ActivityService {
             );
             if (!question) continue;
             if (question.type === 'multiple_choice') {
-                if (question.correctChoiceIds === answer.selectedChoiceId) {
+                if (question.correctChoiceId === answer.selectedChoiceId) {
                     score += question.points;
                 }
             } else if (question.type === 'matching') {
@@ -168,6 +168,8 @@ export class ActivityService {
                 }
                 score += (correctMatches / totalPairs) * question.points;
             }
+
+            console.log({ points: question.points, score });
         }
         return score;
     }
