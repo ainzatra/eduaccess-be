@@ -14,13 +14,13 @@ export class LessonService {
     ) {}
 
     async createLesson(id: string, files, body) {
-        if (!files.video || !files.subtitle) throw new BadRequestException();
+        if (!files.video) throw new BadRequestException();
         const video = files.video[0];
-        const subtitle = files.subtitle[0];
+        const subtitle = files.subtitle?.[0] ?? null;
 
         if (video.mimetype !== 'video/mp4')
             throw new BadRequestException('Video must be .mp4');
-        if (subtitle.mimetype !== 'text/vtt')
+        if (subtitle && subtitle.mimetype !== 'text/vtt')
             throw new BadRequestException('Subtitle must be .vtt');
 
         const { title, subjectId } = body;
@@ -42,18 +42,23 @@ export class LessonService {
 
         console.log({ video, subtitle });
         const videoKey = `lessons/${lesson.id}/${video.originalname}`;
-        const subtitleKey = `lessons/${lesson.id}/${subtitle.originalname}`;
+        const subtitleKey = subtitle
+            ? `lessons/${lesson.id}/${subtitle.originalname}`
+            : '';
         console.log({ videoKey, subtitleKey });
 
         const video_url = await this.s3.upload(video, videoKey);
-        const subtitle_url = await this.s3.upload(subtitle, subtitleKey);
+        const updateData: { video_url: string; subtitle_url?: string } = {
+            video_url,
+        };
+        if (subtitle) {
+            const subtitle_url = await this.s3.upload(subtitle, subtitleKey);
+            updateData.subtitle_url = subtitle_url;
+        }
 
         await this.prisma.lesson.update({
             where: { id: lesson.id },
-            data: {
-                video_url,
-                subtitle_url,
-            },
+            data: updateData,
         });
 
         return 'Lesson created successfully';
