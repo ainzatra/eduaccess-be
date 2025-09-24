@@ -14,6 +14,8 @@ import { StudentModule } from './modules/student/student.module';
 import { TeacherModule } from './modules/teacher/teacher.module';
 import { LessonModule } from './modules/lesson/lesson.module';
 import { ActivityModule } from './modules/activity/activity.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
     imports: [
@@ -34,6 +36,8 @@ import { ActivityModule } from './modules/activity/activity.module';
         TeacherModule,
         LessonModule,
         ActivityModule,
+        NotificationModule,
+        EmailModule,
     ],
     controllers: [],
     providers: [

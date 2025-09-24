@@ -60,6 +60,7 @@ model User {
   gender             Gender?
   created_at         DateTime             @default(now())
   updated_at         DateTime             @updatedAt()
+  notifications      Notification[]
   email              String?              @unique()
   lessons            Lesson[]             @relation("UserLessons")
   sections_taught    Section[]            @relation("SectionTeacher")
@@ -68,18 +69,20 @@ model User {
   todos              Todo[]
   created_activities Activity[]
   submissions        ActivitySubmission[]
+  resetOtps          ResetOtp[]
 }
 
 model Section {
-  id         String     @id() @default(uuid())
-  name       String     @unique()
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt()
-  teacher_id String?
-  teacher    User?      @relation("SectionTeacher", fields: [teacher_id], references: [id])
-  subjects   Subject[]  @relation("SectionSubjects")
-  students   User[]     @relation("SectionStudents")
-  activities Activity[]
+  id            String         @id() @default(uuid())
+  name          String         @unique()
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt()
+  teacher_id    String?
+  teacher       User?          @relation("SectionTeacher", fields: [teacher_id], references: [id])
+  subjects      Subject[]      @relation("SectionSubjects")
+  students      User[]         @relation("SectionStudents")
+  activities    Activity[]
+  announcements Announcement[]
 }
 
 model Subject {
@@ -154,4 +157,32 @@ model ActivitySubmission {
   activity     Activity         @relation(fields: [activity_id], references: [id])
   student_id   String
   student      User             @relation(fields: [student_id], references: [id])
+}
+
+model Notification {
+  id          String   @id() @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  user_id     String
+  user        User     @relation(fields: [user_id], references: [id])
+}
+
+model Announcement {
+  id          String   @id() @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  section_id  String
+  section     Section  @relation(fields: [section_id], references: [id])
+}
+
+model ResetOtp {
+  id        String   @id() @default(uuid())
+  otp       String
+  user_id   String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [user_id], references: [id])
 }

@@ -6,12 +6,16 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from '../s3.service';
 import { smartUnion } from '@zenstackhq/runtime/zod-utils';
+import { EmailService } from '../email/email.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class ActivityService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly s3: S3Service,
+        private readonly email: EmailService,
+        private readonly notification: NotificationService,
     ) {}
 
     async createActivity(data, files) {
@@ -209,6 +213,13 @@ export class ActivityService {
                 section_id: section.id,
                 subject_id: subject,
             },
+            include: {
+                submissions: {
+                    where: {
+                        student_id: user.role == 'student' ? user.id : '',
+                    },
+                },
+            },
         });
     }
 
@@ -231,6 +242,13 @@ export class ActivityService {
     async submitActivity(studentId: string, body) {
         const activity = await this.prisma.activity.findUnique({
             where: { id: body.activityId },
+            include: {
+                teacher: {
+                    select: {
+                        email: true,
+                    },
+                },
+            },
         });
 
         if (!activity) throw new NotFoundException('Activity not found');
@@ -263,6 +281,32 @@ export class ActivityService {
                 status: activity.graded ? 'graded' : 'pending',
             },
         });
+
+        const student = await this.prisma.user.findUnique({
+            where: {
+                id: studentId,
+            },
+        });
+
+        const message = `
+            <p>Dear Teacher,</p>
+            <p>A new activity submission has been received from student <strong>${student?.full_name}</strong>.</p>
+            <p><strong>Activity Title:</strong> ${activity.title}</p>
+            <p>Please log in to your EduAccess dashboard to review and grade the submission if applicable.</p>
+            <p>Thank you for your dedication to student learning!</p>
+        `;
+
+        await this.email.sendNotificationEmail(
+            activity.teacher.email ?? '',
+            'New Activity Submission',
+            message,
+        );
+
+        await this.notification.createNotification(
+            activity.teacher_id,
+            'New Activity Submission',
+            `A new activity submission has been received from student ${student?.full_name}. Activity: ${activity.title}`,
+        );
 
         return activity.graded
             ? { score: body.score }
@@ -338,7 +382,7 @@ export class ActivityService {
         if (score > maxPoints)
             throw new BadRequestException('Score exceeds max points');
 
-        return this.prisma.activitySubmission.update({
+        const updatedSubmission = await this.prisma.activitySubmission.update({
             where: {
                 id: submissionId,
             },
@@ -347,5 +391,41 @@ export class ActivityService {
                 status: 'graded',
             },
         });
+
+        const student = await this.prisma.user.findUnique({
+            where: { id: submission.student_id },
+            include: {
+                guardian: true,
+            },
+        });
+
+        if (!student) throw new NotFoundException('Student not found');
+
+        // Send notification to student
+        await this.notification.createNotification(
+            submission.student_id,
+            'Submission Graded',
+            `Your submission for "${activity.title}" has been graded with a score of ${score}.`,
+        );
+
+        // Send email to guardian if exists
+        if (student.guardian) {
+            const message = `
+                <p>Dear Guardian,</p>
+                <p>Your student <strong>${student.full_name}</strong> has received a grade for their activity submission.</p>
+                <p><strong>Activity Title:</strong> ${activity.title}</p>
+                <p><strong>Score:</strong> ${score}</p>
+                <p>Please log in to your EduAccess dashboard to view more details.</p>
+                <p>Thank you!</p>
+            `;
+
+            await this.email.sendNotificationEmail(
+                student.guardian.email,
+                'Student Activity Graded',
+                message,
+            );
+        }
+
+        return updatedSubmission;
     }
 }
