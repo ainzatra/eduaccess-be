@@ -127,24 +127,24 @@ export class UsersService {
     }
 
     async findAvailableStudents(): Promise<User[]> {
-        const students = this.prisma.user.findMany({
+        const students = await this.prisma.user.findMany({
             where: {
                 role: 'student',
                 assigned_section: { none: {} },
             },
             orderBy: { full_name: 'asc' },
         });
-        console.log(students);
+        console.log('available students:', students.length);
         return students;
     }
 
     async countStudentTeacher() {
-        const studentCount = this.prisma.user.count({
+        const studentCount = await this.prisma.user.count({
             where: {
                 role: 'student',
             },
         });
-        const teacherCount = this.prisma.user.count({
+        const teacherCount = await this.prisma.user.count({
             where: {
                 role: 'teacher',
             },
@@ -154,45 +154,88 @@ export class UsersService {
     }
 
     async updateUser(id: string, data) {
-        const user = await this.prisma.user.findUnique({
+        const existingUser = await this.prisma.user.findUnique({
             where: { id },
         });
 
-        if (!user) throw new NotFoundException();
-        let updatedUser = {};
-        if (data.user) {
-            console.log('Update user', data.user);
-            updatedUser = await this.prisma.user.update({
-                where: { id },
-                data: data.user,
-                select: {
-                    id: true,
-                    full_name: true,
-                    role: true,
-                },
-            });
-        }
+        if (!existingUser) throw new NotFoundException();
 
-        if (data.guardian) {
-            console.log('Update guardian', data.guardian);
-            await this.prisma.guardian.upsert({
-                where: { student_id: id },
-                create: {
-                    ...data.guardian,
-                    student_id: id,
-                },
-                update: data.guardian,
-            });
-        }
+        await this.prisma.$transaction(async (tx) => {
+            // Email uniqueness checks using tx for isolation
+            if (data.guardian) {
+                // Check user and guardian tables for email
+                const existingEmailInUser = await tx.user.findUnique({
+                    where: { email: data.guardian.email },
+                });
+                const existingEmailInGuardian = await tx.guardian.findUnique({
+                    where: {
+                        email: data.guardian.email,
+                        NOT: {
+                            student_id: id,
+                        },
+                    },
+                });
+                if (existingEmailInUser || existingEmailInGuardian) {
+                    throw new BadRequestException('Email already used');
+                }
 
-        if (data.teacher || data.admin) {
-            console.log('Update teacher/admin', data.teacher || data.admin);
-            await this.prisma.user.update({
-                where: { id },
-                data: data.teacher || data.admin,
-            });
-        }
-        return updatedUser;
+                await tx.guardian.upsert({
+                    where: { student_id: id },
+                    create: {
+                        ...data.guardian,
+                        student_id: id,
+                    },
+                    update: data.guardian,
+                });
+            }
+
+            if (data.teacher || data.admin) {
+                const teacherData = data.teacher || data.admin;
+                // Check user and guardian tables for email (exclude current user)
+                const existingEmailInUser = await tx.user.findUnique({
+                    where: {
+                        email: teacherData.email,
+                        NOT: { id },
+                    },
+                });
+                const existingEmailInGuardian = await tx.guardian.findUnique({
+                    where: { email: teacherData.email },
+                });
+                if (existingEmailInUser || existingEmailInGuardian) {
+                    throw new BadRequestException('Email already used');
+                }
+
+                // Update user, preserving existing fields
+                await tx.user.update({
+                    where: { id },
+                    data: {
+                        ...existingUser, // Preserve non-updated fields
+                        ...teacherData,
+                    },
+                });
+            }
+
+            if (data.user) {
+                // Update user fields (after teacher/admin to avoid conflicts)
+                await tx.user.update({
+                    where: { id },
+                    data: data.user,
+                });
+            }
+        });
+
+        // Fetch and return the fully updated user
+        const updatedUser = await this.prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                full_name: true,
+                role: true,
+                email: true, // Include if relevant
+            },
+        });
+
+        return updatedUser || {};
     }
 
     async updatePassword(id: string, data) {
