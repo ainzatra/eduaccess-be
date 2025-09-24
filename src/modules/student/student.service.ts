@@ -54,6 +54,13 @@ export class StudentService {
     async fetchStudentDetails(id: string) {
         const student = await this.prisma.user.findUnique({
             where: { id, role: 'student' },
+            include: {
+                assigned_section: {
+                    select: {
+                        name: true,
+                    },
+                },
+            },
         });
 
         if (!student) throw new NotFoundException('Student not found');
@@ -66,7 +73,9 @@ export class StudentService {
             where: {
                 student_id: id,
             },
-            include: { activity: { select: { title: true, level: true } } },
+            include: {
+                activity: { select: { title: true, level: true, id: true } },
+            },
             orderBy: {
                 submitted_at: 'desc',
             },

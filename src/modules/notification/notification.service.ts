@@ -22,4 +22,11 @@ export class NotificationService {
             },
         });
     }
+
+    async getNotifications(userId: string) {
+        return await this.prisma.notification.findMany({
+            where: { user_id: userId },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
 }
