@@ -53,7 +53,7 @@ export class ActivityService {
 
         console.log('Question type before saving:', typeof questions);
         // Save the schema with s3 urls to db
-        return await this.prisma.activity.create({
+        const createdActivity = await this.prisma.activity.create({
             data: {
                 title,
                 titleAudio,
@@ -67,6 +67,61 @@ export class ActivityService {
                 questions: JSON.stringify(questions),
             },
         });
+
+        // Notify all students in the section
+        const students = await this.prisma.user.findMany({
+            where: {
+                assigned_section: {
+                    some: {
+                        id: section.id,
+                    },
+                },
+            },
+            select: {
+                id: true,
+                full_name: true,
+                guardian: {
+                    select: {
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        const subject = await this.prisma.subject.findUnique({
+            where: { id: subject_id },
+        });
+
+        for (const student of students) {
+            await this.notification.createNotification({
+                user_id: student.id,
+                title: 'New Activity Created',
+                description: `A new activity "${createdActivity.title}" has been created by your teacher.`,
+                subject_id: createdActivity.subject_id,
+                activity_id: createdActivity.id,
+                type: 'new_activity',
+            });
+
+            // Send email to guardian if exists
+            if (student.guardian) {
+                const message = `
+                    <p>Dear Guardian,</p>
+                    <p>A new activity has been created for your student <strong>${student.full_name}</strong>.</p>
+                    <p><strong>Activity Title:</strong> ${createdActivity.title}</p>
+                    <p><strong>Subject:</strong> ${subject?.title}</p>
+                    <p>Please encourage your student to complete the activity.</p>
+                    <p>Thank you!</p>
+                `;
+
+                await this.email.sendNotificationEmail(
+                    student.guardian.email,
+                    'New Activity Assigned to Student',
+                    message,
+                );
+            }
+        }
+
+        return createdActivity;
     }
 
     private async uploadActivityFiles(schema, files) {
@@ -296,17 +351,22 @@ export class ActivityService {
             <p>Thank you for your dedication to student learning!</p>
         `;
 
-        await this.email.sendNotificationEmail(
-            activity.teacher.email ?? '',
-            'New Activity Submission',
-            message,
-        );
+        if (!activity.graded) {
+            await this.email.sendNotificationEmail(
+                activity.teacher.email ?? '',
+                'New Activity Submission',
+                message,
+            );
 
-        await this.notification.createNotification(
-            activity.teacher_id,
-            'New Activity Submission',
-            `A new activity submission has been received from student ${student?.full_name}. Activity: ${activity.title}`,
-        );
+            await this.notification.createNotification({
+                user_id: activity.teacher_id,
+                title: 'New Activity Submission',
+                description: `A new activity submission has been received from student ${student?.full_name}. Activity: ${activity.title}`,
+                subject_id: activity.subject_id,
+                activity_id: activity.id,
+                type: 'new_submission',
+            });
+        }
 
         return activity.graded
             ? { score: body.score }
@@ -402,11 +462,14 @@ export class ActivityService {
         if (!student) throw new NotFoundException('Student not found');
 
         // Send notification to student
-        await this.notification.createNotification(
-            submission.student_id,
-            'Submission Graded',
-            `Your submission for "${activity.title}" has been graded with a score of ${score}.`,
-        );
+        await this.notification.createNotification({
+            user_id: submission.student_id,
+            title: 'Submission Graded',
+            description: `Your submission for "${activity.title}" has been graded with a score of ${score}.`,
+            subject_id: activity.subject_id,
+            activity_id: activity.id,
+            type: 'activity_graded',
+        });
 
         // Send email to guardian if exists
         if (student.guardian) {

@@ -36,6 +36,12 @@ enum ActivityLevel {
   advance
 }
 
+enum NotificationType {
+  new_activity
+  new_submission
+  activity_graded
+}
+
 enum Gender {
   male
   female
@@ -160,12 +166,15 @@ model ActivitySubmission {
 }
 
 model Notification {
-  id          String   @id() @default(uuid())
+  id          String           @id() @default(uuid())
   title       String
   description String?
-  createdAt   DateTime @default(now())
+  type        NotificationType @default(new_activity)
+  createdAt   DateTime         @default(now())
+  subject_id  String
+  activity_id String
   user_id     String
-  user        User     @relation(fields: [user_id], references: [id])
+  user        User             @relation(fields: [user_id], references: [id])
 }
 
 model Announcement {
