@@ -58,6 +58,7 @@ export class StudentService {
                 assigned_section: {
                     select: {
                         name: true,
+                        id: true,
                     },
                 },
             },
@@ -81,6 +82,23 @@ export class StudentService {
             },
         });
 
-        return { student, guardian, submissions };
+        const subjects = await this.prisma.subject.findMany({
+            where: {
+                assigned_sections: {
+                    some: {
+                        students: {
+                            some: {
+                                id,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                title: 'asc',
+            },
+        });
+
+        return { student, guardian, submissions, subjects };
     }
 }

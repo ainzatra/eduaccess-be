@@ -16,4 +16,14 @@ export class TeacherController {
     fetchMyActivities(@Param('id') id: string) {
         return this.service.fetchMyActivities(id);
     }
+
+    @Get('todos/:id')
+    fetchMyTodos(@Param('id') id: string) {
+        return this.service.fetchMyTodos(id);
+    }
+
+    @Get(':id')
+    fetchTeacherDetails(@Param('id') id: string) {
+        return this.service.fetchTeacherDetails(id);
+    }
 }

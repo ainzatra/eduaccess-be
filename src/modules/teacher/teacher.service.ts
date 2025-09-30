@@ -45,4 +45,83 @@ export class TeacherService {
 
         return activities;
     }
+
+    async fetchMyTodos(id: string) {
+        const section = await this.prisma.section.findFirst({
+            where: {
+                teacher_id: id,
+            },
+        });
+
+        if (!section) throw new NotFoundException('No section assigned');
+
+        const todos = await this.prisma.activity.findMany({
+            where: {
+                section_id: section.id,
+                graded: false,
+                submissions: {
+                    every: {
+                        status: 'pending',
+                    },
+                },
+            },
+            select: {
+                id: true,
+                title: true,
+                subject: { select: { title: true, id: true } },
+                _count: {
+                    select: {
+                        submissions: {
+                            where: {
+                                status: 'pending',
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        console.log(todos);
+
+        return todos;
+    }
+
+    async fetchTeacherDetails(id: string) {
+        const teacher = await this.prisma.user.findUnique({
+            where: { id, role: 'teacher' },
+            include: {
+                sections_taught: {
+                    select: {
+                        name: true,
+                        id: true,
+                    },
+                },
+            },
+        });
+
+        if (!teacher) throw new NotFoundException('Teacher not found');
+
+        const subjects = await this.prisma.subject.findMany({
+            where: {
+                assigned_sections: {
+                    some: {
+                        teacher_id: id,
+                    },
+                },
+            },
+            orderBy: {
+                title: 'asc',
+            },
+        });
+
+        const activities = await this.prisma.activity.findMany({
+            where: {
+                section: {
+                    teacher_id: id,
+                },
+            },
+        });
+
+        return { teacher, subjects, activities };
+    }
 }
