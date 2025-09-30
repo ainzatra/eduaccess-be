@@ -62,6 +62,7 @@ model User {
     gender           Gender?
     created_at       DateTime  @default(now())
     updated_at       DateTime  @updatedAt
+    archived         Boolean   @default(false)
 
     notifications   Notification[]
 

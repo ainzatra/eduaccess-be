@@ -54,7 +54,9 @@ export class UsersService {
     }
 
     async findAll(): Promise<User[]> {
-        return this.prisma.user.findMany();
+        return this.prisma.user.findMany({
+            where: { archived: false },
+        });
     }
 
     async findByEmail(email: string): Promise<User | null> {
@@ -119,6 +121,7 @@ export class UsersService {
             where: {
                 role: 'teacher',
                 sections_taught: { none: {} },
+                archived: false,
             },
             orderBy: { full_name: 'asc' },
         });
@@ -131,6 +134,7 @@ export class UsersService {
             where: {
                 role: 'student',
                 assigned_section: { none: {} },
+                archived: false,
             },
             orderBy: { full_name: 'asc' },
         });
@@ -142,11 +146,13 @@ export class UsersService {
         const studentCount = await this.prisma.user.count({
             where: {
                 role: 'student',
+                archived: false,
             },
         });
         const teacherCount = await this.prisma.user.count({
             where: {
                 role: 'teacher',
+                archived: false,
             },
         });
 
@@ -309,6 +315,51 @@ export class UsersService {
             include: {
                 guardian: true,
             },
+        });
+    }
+
+    async archiveUser(id: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+        });
+
+        if (!user) throw new NotFoundException();
+
+        await this.prisma.$transaction(async (tx) => {
+            // Archive user by setting archived field to true
+            await tx.user.update({
+                where: { id },
+                data: { archived: true },
+            });
+
+            if (user.role === 'teacher') {
+                // Unassign sections
+                await tx.section.updateMany({
+                    where: { teacher_id: id },
+                    data: { teacher_id: null },
+                });
+            }
+            if (user.role === 'student') {
+                // Unassign section
+                await tx.user.update({
+                    where: { id },
+                    data: { assigned_section: { set: [] } },
+                });
+            }
+        });
+    }
+
+    async unarchiveUser(id: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+        });
+
+        if (!user) throw new NotFoundException();
+
+        // Unarchive user by setting archived field to false
+        await this.prisma.user.update({
+            where: { id },
+            data: { archived: false },
         });
     }
 }
