@@ -272,6 +272,12 @@ export class ActivityService {
                 submissions: {
                     where: {
                         student_id: user.role == 'student' ? user.id : '',
+                        is_latest: true,
+                    },
+                },
+                retake_permissions: {
+                    where: {
+                        student_id: user.role == 'student' ? user.id : '',
                     },
                 },
             },
@@ -320,12 +326,45 @@ export class ActivityService {
                 student_id: studentId,
                 activity_id: body.activityId,
             },
+            orderBy: {
+                version: 'desc',
+            },
         });
 
-        if (prevSubmission && prevSubmission.length > 0)
-            throw new BadRequestException(
-                'You have already submitted this activity',
-            );
+        // Check if student has already submitted and doesn't have retake permission
+        if (prevSubmission && prevSubmission.length > 0) {
+            const retakePermission =
+                await this.prisma.activityRetakePermission.findUnique({
+                    where: {
+                        activity_id_student_id: {
+                            activity_id: body.activityId,
+                            student_id: studentId,
+                        },
+                    },
+                });
+
+            if (!retakePermission) {
+                throw new BadRequestException(
+                    'You have already submitted this activity. Please contact your teacher for retake permission.',
+                );
+            }
+        }
+
+        // Calculate version number for this submission
+        const version =
+            prevSubmission.length > 0 ? prevSubmission[0].version + 1 : 1;
+
+        // If this is a retake, update the previous submission to not be latest
+        if (prevSubmission.length > 0) {
+            await this.prisma.activitySubmission.update({
+                where: {
+                    id: prevSubmission[0].id,
+                },
+                data: {
+                    is_latest: false,
+                },
+            });
+        }
 
         const submission = await this.prisma.activitySubmission.create({
             data: {
@@ -334,8 +373,24 @@ export class ActivityService {
                 score: activity.graded ? body.score : 0,
                 schema: JSON.stringify(body.answers),
                 status: activity.graded ? 'graded' : 'pending',
+                version: version,
+                is_latest: true,
+                previous_submission_id:
+                    prevSubmission.length > 0 ? prevSubmission[0].id : null,
             },
         });
+
+        // If this was a retake, remove the retake permission after submission
+        if (prevSubmission.length > 0) {
+            await this.prisma.activityRetakePermission.delete({
+                where: {
+                    activity_id_student_id: {
+                        activity_id: body.activityId,
+                        student_id: studentId,
+                    },
+                },
+            });
+        }
 
         const student = await this.prisma.user.findUnique({
             where: {
@@ -375,7 +430,7 @@ export class ActivityService {
 
     async fetchActivitySubmissions(activityId: string) {
         const submissions = await this.prisma.activitySubmission.findMany({
-            where: { activity_id: activityId },
+            where: { activity_id: activityId, is_latest: true },
             include: {
                 student: {
                     select: {
@@ -490,5 +545,123 @@ export class ActivityService {
         }
 
         return updatedSubmission;
+    }
+
+    async allowRetake(
+        activityId: string,
+        studentId: string,
+        teacherId: string,
+        reason?: string,
+    ) {
+        // Verify the teacher owns this activity
+        const activity = await this.prisma.activity.findUnique({
+            where: { id: activityId },
+        });
+
+        if (!activity) throw new NotFoundException('Activity not found');
+
+        const section = await this.prisma.section.findUnique({
+            where: { id: activity?.section_id },
+        });
+
+        if (section?.teacher_id !== teacherId) {
+            throw new BadRequestException(
+                'You are not authorized to grant retake permission for this activity',
+            );
+        }
+
+        // Check if student has submitted this activity before
+        const existingSubmission =
+            await this.prisma.activitySubmission.findFirst({
+                where: {
+                    activity_id: activityId,
+                    student_id: studentId,
+                },
+            });
+
+        if (!existingSubmission) {
+            throw new BadRequestException(
+                'Student has not submitted this activity yet',
+            );
+        }
+
+        // Create or update retake permission
+        const retakePermission =
+            await this.prisma.activityRetakePermission.upsert({
+                where: {
+                    activity_id_student_id: {
+                        activity_id: activityId,
+                        student_id: studentId,
+                    },
+                },
+                update: {
+                    reason: reason,
+                },
+                create: {
+                    activity_id: activityId,
+                    student_id: studentId,
+                    reason: reason,
+                },
+            });
+
+        // Notify the student about the retake permission
+        const student = await this.prisma.user.findUnique({
+            where: { id: studentId },
+            include: { guardian: true },
+        });
+
+        if (student) {
+            await this.notification.createNotification({
+                user_id: studentId,
+                title: 'Activity Retake Allowed',
+                description: `Your teacher has allowed you to retake the activity "${activity.title}".${reason ? ` Reason: ${reason}` : ''}`,
+                subject_id: activity.subject_id,
+                activity_id: activity.id,
+                type: 'new_activity',
+            });
+
+            await this.email.sendNotificationEmail(
+                student.guardian?.email ?? '',
+                'Activity Retake Permission Granted',
+                `
+                <p>Dear ${student.full_name},</p>
+                <p>Your teacher has granted you permission to retake the activity titled "<strong>${activity.title}</strong>".</p>
+                ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+                <p>Please log in to your EduAccess dashboard to retake the activity at your earliest convenience.</p>
+                <p>Best regards,<br/>EduAccess Team</p>
+                `,
+            );
+        }
+
+        return retakePermission;
+    }
+
+    async fetchStudentSubmissionHistory(activityId: string, studentId: string) {
+        const submissions = await this.prisma.activitySubmission.findMany({
+            where: {
+                activity_id: activityId,
+                student_id: studentId,
+                is_latest: false,
+            },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        avatar: true,
+                        full_name: true,
+                    },
+                },
+                activity: {
+                    select: {
+                        title: true,
+                    },
+                },
+            },
+            orderBy: {
+                version: 'asc',
+            },
+        });
+
+        return submissions;
     }
 }

@@ -127,4 +127,29 @@ export class ActivityController {
     deleteActivity(@Param('id') id: string) {
         return this.service.deleteActivity(id);
     }
+
+    @Post('allow-retake/:activityId/:studentId')
+    allowRetake(
+        @Param('activityId') activityId: string,
+        @Param('studentId') studentId: string,
+        @Body() body: { teacherId: string; reason?: string },
+    ) {
+        return this.service.allowRetake(
+            activityId,
+            studentId,
+            body.teacherId,
+            body.reason,
+        );
+    }
+
+    @Get('submissions/:activityId/:studentId/history')
+    fetchStudentSubmissionHistory(
+        @Param('activityId') activityId: string,
+        @Param('studentId') studentId: string,
+    ) {
+        return this.service.fetchStudentSubmissionHistory(
+            activityId,
+            studentId,
+        );
+    }
 }

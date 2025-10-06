@@ -92,6 +92,9 @@ model User {
     resetOtps     ResetOtp[]
     // logs          ActivityLog[]
 
+    // Retake permissions received by this student
+    retake_permissions ActivityRetakePermission[]
+
     @@allow('all', auth().role == 'admin')           // Admins can do everything
     @@allow('create', auth().role == 'admin')        // Only admins can create users
     @@allow('update', auth().id == id)               // Users can update themselves
@@ -201,6 +204,7 @@ model Activity {
   teacher      User  @relation(fields: [teacher_id], references: [id])
 
   submissions  ActivitySubmission[]
+  retake_permissions ActivityRetakePermission[]
   
 }
 
@@ -210,6 +214,8 @@ model ActivitySubmission {
   score         Int
   schema        String
   status        SubmissionStatus @default(pending)
+  version       Int      @default(1)
+  is_latest     Boolean  @default(true)
 
   activity_id   String
   activity      Activity @relation(fields: [activity_id], references: [id])
@@ -217,6 +223,29 @@ model ActivitySubmission {
   student_id    String
   student       User     @relation(fields: [student_id], references: [id])
 
+  // Previous submission if this is a retake
+  previous_submission_id String?
+  previous_submission ActivitySubmission? @relation("SubmissionRetake", fields: [previous_submission_id], references: [id])
+  
+  // Next submission if this has been retaken
+  next_submissions ActivitySubmission[] @relation("SubmissionRetake")
+
+  @@unique([activity_id, student_id, version])
+}
+
+model ActivityRetakePermission {
+  id String @id @default(uuid())
+  created_at DateTime @default(now())
+  
+  activity_id String
+  activity Activity @relation(fields: [activity_id], references: [id])
+  
+  student_id String
+  student User @relation(fields: [student_id], references: [id])
+  
+  reason String?
+  
+  @@unique([activity_id, student_id])
 }
 
 // model ActivityLog {

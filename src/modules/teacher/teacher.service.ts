@@ -60,8 +60,9 @@ export class TeacherService {
                 section_id: section.id,
                 graded: false,
                 submissions: {
-                    every: {
+                    some: {
                         status: 'pending',
+                        is_latest: true,
                     },
                 },
             },
@@ -74,6 +75,7 @@ export class TeacherService {
                         submissions: {
                             where: {
                                 status: 'pending',
+                                is_latest: true,
                             },
                         },
                     },
@@ -81,7 +83,7 @@ export class TeacherService {
             },
         });
 
-        console.log(todos);
+        console.log({ todos });
 
         return todos;
     }

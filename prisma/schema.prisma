@@ -54,9 +54,9 @@ enum SubmissionStatus {
 }
 
 model User {
-  id                 String               @id() @default(uuid())
+  id                 String                     @id() @default(uuid())
   full_name          String
-  username           String               @unique()
+  username           String                     @unique()
   password_hash      String
   role               String
   age                Int?
@@ -64,19 +64,20 @@ model User {
   avatar             String?
   nickname           String?
   gender             Gender?
-  created_at         DateTime             @default(now())
-  updated_at         DateTime             @updatedAt()
-  archived           Boolean              @default(false)
+  created_at         DateTime                   @default(now())
+  updated_at         DateTime                   @updatedAt()
+  archived           Boolean                    @default(false)
   notifications      Notification[]
-  email              String?              @unique()
-  lessons            Lesson[]             @relation("UserLessons")
-  sections_taught    Section[]            @relation("SectionTeacher")
-  assigned_section   Section[]            @relation("SectionStudents")
+  email              String?                    @unique()
+  lessons            Lesson[]                   @relation("UserLessons")
+  sections_taught    Section[]                  @relation("SectionTeacher")
+  assigned_section   Section[]                  @relation("SectionStudents")
   guardian           Guardian?
   todos              Todo[]
   created_activities Activity[]
   submissions        ActivitySubmission[]
   resetOtps          ResetOtp[]
+  retake_permissions ActivityRetakePermission[]
 }
 
 model Section {
@@ -135,35 +136,55 @@ model Todo {
 }
 
 model Activity {
-  id                String               @id() @default(uuid())
-  title             String
-  titleAudio        String?
-  instructions      String
-  instructionsAudio String?
-  questions         String
-  level             ActivityLevel
-  graded            Boolean              @default(false)
-  created_at        DateTime             @default(now())
-  updated_at        DateTime             @updatedAt()
-  subject_id        String
-  subject           Subject              @relation(fields: [subject_id], references: [id])
-  section_id        String
-  section           Section              @relation(fields: [section_id], references: [id])
-  teacher_id        String
-  teacher           User                 @relation(fields: [teacher_id], references: [id])
-  submissions       ActivitySubmission[]
+  id                 String                     @id() @default(uuid())
+  title              String
+  titleAudio         String?
+  instructions       String
+  instructionsAudio  String?
+  questions          String
+  level              ActivityLevel
+  graded             Boolean                    @default(false)
+  created_at         DateTime                   @default(now())
+  updated_at         DateTime                   @updatedAt()
+  subject_id         String
+  subject            Subject                    @relation(fields: [subject_id], references: [id])
+  section_id         String
+  section            Section                    @relation(fields: [section_id], references: [id])
+  teacher_id         String
+  teacher            User                       @relation(fields: [teacher_id], references: [id])
+  submissions        ActivitySubmission[]
+  retake_permissions ActivityRetakePermission[]
 }
 
 model ActivitySubmission {
-  id           String           @id() @default(uuid())
-  submitted_at DateTime         @default(now())
-  score        Int
-  schema       String
-  status       SubmissionStatus @default(pending)
-  activity_id  String
-  activity     Activity         @relation(fields: [activity_id], references: [id])
-  student_id   String
-  student      User             @relation(fields: [student_id], references: [id])
+  id                     String               @id() @default(uuid())
+  submitted_at           DateTime             @default(now())
+  score                  Int
+  schema                 String
+  status                 SubmissionStatus     @default(pending)
+  version                Int                  @default(1)
+  is_latest              Boolean              @default(true)
+  activity_id            String
+  activity               Activity             @relation(fields: [activity_id], references: [id])
+  student_id             String
+  student                User                 @relation(fields: [student_id], references: [id])
+  previous_submission_id String?
+  previous_submission    ActivitySubmission?  @relation("SubmissionRetake", fields: [previous_submission_id], references: [id])
+  next_submissions       ActivitySubmission[] @relation("SubmissionRetake")
+
+  @@unique([activity_id, student_id, version])
+}
+
+model ActivityRetakePermission {
+  id          String   @id() @default(uuid())
+  created_at  DateTime @default(now())
+  activity_id String
+  activity    Activity @relation(fields: [activity_id], references: [id])
+  student_id  String
+  student     User     @relation(fields: [student_id], references: [id])
+  reason      String?
+
+  @@unique([activity_id, student_id])
 }
 
 model Notification {
