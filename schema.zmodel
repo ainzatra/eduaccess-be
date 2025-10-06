@@ -154,6 +154,8 @@ model Lesson {
     created_by   String
     creator      User     @relation("UserLessons", fields: [created_by], references: [id])
 
+    images       LessonImage[]
+
     // activities   Activity[]
 
     @@allow('all', auth().role == 'admin')
@@ -161,6 +163,16 @@ model Lesson {
     @@allow('update', auth().role == 'teacher' && created_by == auth().id)
     @@allow('delete', auth().role == 'teacher' && created_by == auth().id)
     @@allow('read', true)
+}
+
+model LessonImage {
+    id        String   @id @default(uuid())
+    url       String
+    created_at DateTime @default(now())
+    
+    lesson_id String
+    lesson    Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+    
 }
 
 model Guardian {

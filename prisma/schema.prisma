@@ -106,16 +106,25 @@ model Subject {
 }
 
 model Lesson {
-  id           String   @id() @default(uuid())
+  id           String        @id() @default(uuid())
   title        String
   video_url    String?
   subtitle_url String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt()
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt()
   subject_id   String
-  subject      Subject  @relation(fields: [subject_id], references: [id])
+  subject      Subject       @relation(fields: [subject_id], references: [id])
   created_by   String
-  creator      User     @relation("UserLessons", fields: [created_by], references: [id])
+  creator      User          @relation("UserLessons", fields: [created_by], references: [id])
+  images       LessonImage[]
+}
+
+model LessonImage {
+  id         String   @id() @default(uuid())
+  url        String
+  created_at DateTime @default(now())
+  lesson_id  String
+  lesson     Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
 }
 
 model Guardian {

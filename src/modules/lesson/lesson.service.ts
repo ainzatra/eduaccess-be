@@ -14,14 +14,36 @@ export class LessonService {
     ) {}
 
     async createLesson(id: string, files, body) {
-        if (!files.video) throw new BadRequestException();
-        const video = files.video[0];
+        const video = files.video?.[0] ?? null;
         const subtitle = files.subtitle?.[0] ?? null;
+        const images = files.images ?? [];
 
-        if (video.mimetype !== 'video/mp4')
+        // Validate that either video or images are present
+        if (!video && images.length === 0) {
+            throw new BadRequestException(
+                'Either video or at least one image must be provided',
+            );
+        }
+
+        // Validate video if present
+        if (video && video.mimetype !== 'video/mp4') {
             throw new BadRequestException('Video must be .mp4');
-        if (subtitle && subtitle.mimetype !== 'text/vtt')
+        }
+
+        // Validate subtitle if present
+        if (subtitle && subtitle.mimetype !== 'text/vtt') {
             throw new BadRequestException('Subtitle must be .vtt');
+        }
+
+        // Validate images if present
+        const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        for (const image of images) {
+            if (!allowedImageTypes.includes(image.mimetype)) {
+                throw new BadRequestException(
+                    `Invalid image type: ${image.mimetype}. Allowed types: ${allowedImageTypes.join(', ')}`,
+                );
+            }
+        }
 
         const { title, subjectId } = body;
         console.log({ title, subjectId });
@@ -40,26 +62,51 @@ export class LessonService {
             },
         });
 
-        console.log({ video, subtitle });
-        const videoKey = `lessons/${lesson.id}/${video.originalname}`;
-        const subtitleKey = subtitle
-            ? `lessons/${lesson.id}/${subtitle.originalname}`
-            : '';
-        console.log({ videoKey, subtitleKey });
-
-        const video_url = await this.s3.upload(video, videoKey);
-        const updateData: { video_url: string; subtitle_url?: string } = {
-            video_url,
-        };
-        if (subtitle) {
-            const subtitle_url = await this.s3.upload(subtitle, subtitleKey);
-            updateData.subtitle_url = subtitle_url;
+        // Upload video if present
+        let video_url = '';
+        if (video) {
+            const videoKey = `lessons/${lesson.id}/${video.originalname}`;
+            console.log({ videoKey });
+            video_url = await this.s3.upload(video, videoKey);
         }
 
+        // Upload subtitle if present
+        let subtitle_url = '';
+        if (subtitle) {
+            const subtitleKey = `lessons/${lesson.id}/${subtitle.originalname}`;
+            console.log({ subtitleKey });
+            subtitle_url = await this.s3.upload(subtitle, subtitleKey);
+        }
+
+        // Upload images if present
+        const imageUrls: string[] = [];
+        for (const [index, image] of images.entries()) {
+            const imageKey = `lessons/${lesson.id}/images/${image.originalname}`;
+            console.log({ imageKey });
+            const url = await this.s3.upload(image, imageKey);
+            imageUrls.push(url);
+        }
+
+        // Update lesson with video and subtitle URLs
         await this.prisma.lesson.update({
             where: { id: lesson.id },
-            data: updateData,
+            data: {
+                video_url,
+                subtitle_url,
+            },
         });
+
+        // Create image records if images were uploaded
+        if (imageUrls.length > 0) {
+            const imageData = imageUrls.map((url) => ({
+                url,
+                lesson_id: lesson.id,
+            }));
+
+            await this.prisma.lessonImage.createMany({
+                data: imageData,
+            });
+        }
 
         return 'Lesson created successfully';
     }
@@ -71,6 +118,16 @@ export class LessonService {
                 subject: {
                     select: {
                         id: true,
+                    },
+                },
+                images: {
+                    select: {
+                        id: true,
+                        url: true,
+                        created_at: true,
+                    },
+                    orderBy: {
+                        created_at: 'asc',
                     },
                 },
             },

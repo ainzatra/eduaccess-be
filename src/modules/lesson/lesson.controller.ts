@@ -25,6 +25,7 @@ export class LessonController {
             [
                 { name: 'video', maxCount: 1 },
                 { name: 'subtitle', maxCount: 1 },
+                { name: 'images', maxCount: 10 },
             ],
             { storage: memoryStorage() },
         ),
