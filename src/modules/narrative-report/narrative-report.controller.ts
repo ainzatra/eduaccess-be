@@ -26,9 +26,34 @@ export class NarrativeReportController {
         return this.narrativeReportService.createReport(createReportDto);
     }
 
+    @Get('settings')
+    getReportSettings() {
+        return this.narrativeReportService.getReportSettings();
+    }
+
+    @Put('settings')
+    updateReportSettings(@Body('principal') principal: string) {
+        return this.narrativeReportService.updateReportSettings(principal);
+    }
+
     @Get('student/:studentId')
     getReportByStudent(@Param('studentId') studentId: string) {
         return this.narrativeReportService.getReportByStudent(studentId);
+    }
+
+    @Get('section/:sectionId')
+    getReportsBySection(@Param('sectionId') sectionId: string) {
+        return this.narrativeReportService.getReportsBySection(sectionId);
+    }
+
+    @Get('student-info/:studentId')
+    getStudentInfo(@Param('studentId') studentId: string) {
+        return this.narrativeReportService.getStudentInfo(studentId);
+    }
+
+    @Get(':reportId')
+    getReportById(@Param('reportId') reportId: string) {
+        return this.narrativeReportService.getReportById(reportId);
     }
 
     @Put(':reportId')
@@ -40,30 +65,5 @@ export class NarrativeReportController {
             reportId,
             updateReportDto,
         );
-    }
-
-    @Get('section/:sectionId')
-    getReportsBySection(@Param('sectionId') sectionId: string) {
-        return this.narrativeReportService.getReportsBySection(sectionId);
-    }
-
-    @Get('settings')
-    getReportSettings() {
-        return this.narrativeReportService.getReportSettings();
-    }
-
-    @Put('settings')
-    updateReportSettings(@Body('principal') principal: string) {
-        return this.narrativeReportService.updateReportSettings(principal);
-    }
-
-    @Get('student-info/:studentId')
-    getStudentInfo(@Param('studentId') studentId: string) {
-        return this.narrativeReportService.getStudentInfo(studentId);
-    }
-
-    @Get(':reportId')
-    getReportById(@Param('reportId') reportId: string) {
-        return this.narrativeReportService.getReportById(reportId);
     }
 }
