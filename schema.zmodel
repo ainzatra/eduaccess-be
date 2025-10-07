@@ -271,6 +271,7 @@ model Notification {
     title       String
     description String?
     type        NotificationType @default(new_activity)
+    isRead      Boolean     @default(false)
     createdAt   DateTime    @default(now())
 
     subject_id  String

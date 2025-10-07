@@ -22,4 +22,18 @@ export class NotificationService {
             orderBy: { createdAt: 'desc' },
         });
     }
+
+    async markAsRead(notificationId: string) {
+        return await this.prisma.notification.update({
+            where: { id: notificationId },
+            data: { isRead: true },
+        });
+    }
+
+    async markAllAsRead(userId: string) {
+        return await this.prisma.notification.updateMany({
+            where: { user_id: userId, isRead: false },
+            data: { isRead: true },
+        });
+    }
 }
