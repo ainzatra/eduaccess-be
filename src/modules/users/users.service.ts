@@ -211,6 +211,19 @@ export class UsersService {
                     throw new BadRequestException('Email already used');
                 }
 
+                // Convert birthday to ISO-8601 DateTime if present
+                if (
+                    teacherData.birthday &&
+                    typeof teacherData.birthday === 'string'
+                ) {
+                    // Check if birthday is in YYYY-MM-DD format
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(teacherData.birthday)) {
+                        teacherData.birthday = new Date(
+                            teacherData.birthday,
+                        ).toISOString();
+                    }
+                }
+
                 // Update user, preserving existing fields
                 await tx.user.update({
                     where: { id },
@@ -222,6 +235,19 @@ export class UsersService {
             }
 
             if (data.user) {
+                // Convert birthday to ISO-8601 DateTime if present
+                if (
+                    data.user.birthday &&
+                    typeof data.user.birthday === 'string'
+                ) {
+                    // Check if birthday is in YYYY-MM-DD format
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(data.user.birthday)) {
+                        data.user.birthday = new Date(
+                            data.user.birthday,
+                        ).toISOString();
+                    }
+                }
+
                 // Update user fields (after teacher/admin to avoid conflicts)
                 await tx.user.update({
                     where: { id },

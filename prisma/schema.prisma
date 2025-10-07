@@ -66,6 +66,7 @@ model User {
   gender             Gender?
   created_at         DateTime                   @default(now())
   updated_at         DateTime                   @updatedAt()
+  birthday           DateTime?
   archived           Boolean                    @default(false)
   notifications      Notification[]
   email              String?                    @unique()
@@ -78,19 +79,22 @@ model User {
   submissions        ActivitySubmission[]
   resetOtps          ResetOtp[]
   retake_permissions ActivityRetakePermission[]
+  reports            NarrativeReport[]
 }
 
 model Section {
-  id            String         @id() @default(uuid())
-  name          String         @unique()
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt()
-  teacher_id    String?
-  teacher       User?          @relation("SectionTeacher", fields: [teacher_id], references: [id])
-  subjects      Subject[]      @relation("SectionSubjects")
-  students      User[]         @relation("SectionStudents")
-  activities    Activity[]
-  announcements Announcement[]
+  id              String            @id() @default(uuid())
+  name            String            @unique()
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt()
+  school_year     String?           @default("2025-2026")
+  teacher_id      String?
+  teacher         User?             @relation("SectionTeacher", fields: [teacher_id], references: [id])
+  subjects        Subject[]         @relation("SectionSubjects")
+  students        User[]            @relation("SectionStudents")
+  activities      Activity[]
+  announcements   Announcement[]
+  narrativeReport NarrativeReport[]
 }
 
 model Subject {
@@ -225,4 +229,34 @@ model ResetOtp {
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [user_id], references: [id])
+}
+
+model NarrativeReport {
+  id                             String   @id() @default(uuid())
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt()
+  schoolYear                     String
+  student_id                     String
+  student                        User     @relation(fields: [student_id], references: [id])
+  section_id                     String
+  section                        Section  @relation(fields: [section_id], references: [id])
+  behavior                       Json
+  speechAndLanguage              Json
+  fineMotor                      Json
+  grossMotor                     Json
+  activitiesForDailyLivingSkills Json
+  cognitive                      Json
+  areasForDevelopment            Json
+  strategies                     Json
+  recommendations                Json
+  conclusion                     String
+
+  @@unique([student_id, section_id, schoolYear])
+}
+
+model NarrativeReportSettings {
+  id        String   @id() @default(uuid())
+  principal String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
 }

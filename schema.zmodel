@@ -62,6 +62,7 @@ model User {
     gender           Gender?
     created_at       DateTime  @default(now())
     updated_at       DateTime  @updatedAt
+    birthday         DateTime? 
     archived         Boolean   @default(false)
 
     notifications   Notification[]
@@ -100,6 +101,8 @@ model User {
     @@allow('update', auth().id == id)               // Users can update themselves
     @@allow('read', true)                            // Anyone can read user records
     @@deny('all', true)                              // Deny everything else by default
+
+	reports NarrativeReport[]
 }
 
 model Section {
@@ -107,6 +110,7 @@ model Section {
     name       String    @unique
     created_at DateTime  @default(now())
     updated_at DateTime  @updatedAt
+    school_year String?  @default("2025-2026")
     
     teacher_id String?
     teacher    User?      @relation('SectionTeacher',  fields: [teacher_id], references: [id])
@@ -119,6 +123,8 @@ model Section {
     @@allow('all', auth().role == 'admin')
     @@allow('read', auth().role == 'student' || auth().role == 'teacher')
     @@deny('all', true) // deny everything else by default
+
+	narrativeReport NarrativeReport[]
 }
 
 model Subject {
@@ -260,20 +266,6 @@ model ActivityRetakePermission {
   @@unique([activity_id, student_id])
 }
 
-// model ActivityLog {
-//   id         String     @id @default(uuid())
-//   action     LogAction
-//   target_id  String?
-//   timestamp  DateTime   @default(now())
-
-//   user_id    String
-//   user       User       @relation(fields: [user_id], references: [id])
-
-//   @@allow('all', auth().role == 'admin')
-//   @@allow('read', auth().id == user_id)
-//   @@deny('all', true)
-// }
-
 model Notification {
     id          String      @id @default(uuid())
     title       String
@@ -307,4 +299,38 @@ model ResetOtp {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [user_id], references: [id])
+}
+
+model NarrativeReport {
+  id                                String   @id @default(uuid())
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
+  schoolYear                        String
+
+  student_id                        String
+  student                           User     @relation(fields: [student_id], references: [id])
+
+  section_id                        String
+  section                           Section  @relation(fields: [section_id], references: [id])
+
+  // Json fields should only accept String[]
+  behavior                          Json
+  speechAndLanguage                 Json
+  fineMotor                         Json
+  grossMotor                        Json
+  activitiesForDailyLivingSkills    Json
+  cognitive                         Json
+  areasForDevelopment               Json
+  strategies                        Json
+  recommendations                   Json
+  conclusion                        String
+
+  @@unique([student_id, section_id, schoolYear])
+}
+
+model NarrativeReportSettings {
+    id        String   @id @default(uuid())
+    principal String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }

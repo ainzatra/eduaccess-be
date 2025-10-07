@@ -17,6 +17,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { EmailModule } from './modules/email/email.module';
 import { AnnouncementModule } from './modules/announcement/announcement.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { NarrativeReportModule } from './modules/narrative-report/narrative-report.module';
 
 @Module({
     imports: [
@@ -41,6 +42,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
         EmailModule,
         AnnouncementModule,
         PrismaModule,
+        NarrativeReportModule,
     ],
     controllers: [],
     providers: [
