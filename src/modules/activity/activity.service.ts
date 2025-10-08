@@ -112,12 +112,13 @@ export class ActivityService {
                     <p>Please encourage your student to complete the activity.</p>
                     <p>Thank you!</p>
                 `;
-
-                await this.email.sendNotificationEmail(
-                    student.guardian.email,
-                    'New Activity Assigned to Student',
-                    message,
-                );
+                if (student.guardian.email) {
+                    await this.email.sendNotificationEmail(
+                        student.guardian.email,
+                        'New Activity Assigned to Student',
+                        message,
+                    );
+                }
             }
         }
 
@@ -407,11 +408,13 @@ export class ActivityService {
         `;
 
         if (!activity.graded) {
-            await this.email.sendNotificationEmail(
-                activity.teacher.email ?? '',
-                'New Activity Submission',
-                message,
-            );
+            if (activity.teacher.email) {
+                await this.email.sendNotificationEmail(
+                    activity.teacher.email,
+                    'New Activity Submission',
+                    message,
+                );
+            }
 
             await this.notification.createNotification({
                 user_id: activity.teacher_id,
@@ -536,12 +539,13 @@ export class ActivityService {
                 <p>Please log in to your EduAccess dashboard to view more details.</p>
                 <p>Thank you!</p>
             `;
-
-            await this.email.sendNotificationEmail(
-                student.guardian.email,
-                'Student Activity Graded',
-                message,
-            );
+            if (student.guardian.email) {
+                await this.email.sendNotificationEmail(
+                    student.guardian.email,
+                    'Student Activity Graded',
+                    message,
+                );
+            }
         }
 
         return updatedSubmission;
@@ -619,18 +623,19 @@ export class ActivityService {
                 activity_id: activity.id,
                 type: 'new_activity',
             });
-
-            await this.email.sendNotificationEmail(
-                student.guardian?.email ?? '',
-                'Activity Retake Permission Granted',
-                `
-                <p>Dear ${student.full_name},</p>
-                <p>Your teacher has granted you permission to retake the activity titled "<strong>${activity.title}</strong>".</p>
-                ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
-                <p>Please log in to your EduAccess dashboard to retake the activity at your earliest convenience.</p>
-                <p>Best regards,<br/>EduAccess Team</p>
-                `,
-            );
+            if (student.guardian?.email) {
+                await this.email.sendNotificationEmail(
+                    student.guardian.email,
+                    'Activity Retake Permission Granted',
+                    `
+                    <p>Dear ${student.full_name},</p>
+                    <p>Your teacher has granted you permission to retake the activity titled "<strong>${activity.title}</strong>".</p>
+                    ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+                    <p>Please log in to your EduAccess dashboard to retake the activity at your earliest convenience.</p>
+                    <p>Best regards,<br/>EduAccess Team</p>
+                    `,
+                );
+            }
         }
 
         return retakePermission;

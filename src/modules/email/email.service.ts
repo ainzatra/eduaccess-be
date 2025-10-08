@@ -110,6 +110,7 @@ export class EmailService {
     }
 
     async sendNotificationEmail(to: string, subject: string, message: string) {
+        if (!to) return;
         const title = subject;
         const content = `
             <p>${message}</p>
