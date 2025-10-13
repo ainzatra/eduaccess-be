@@ -181,7 +181,10 @@ export class UsersService {
                         },
                     },
                 });
-                if (existingEmailInUser || existingEmailInGuardian) {
+                if (
+                    (existingEmailInUser || existingEmailInGuardian) &&
+                    data.guardian.email !== ''
+                ) {
                     throw new BadRequestException('Email already used');
                 }
 
@@ -207,7 +210,10 @@ export class UsersService {
                 const existingEmailInGuardian = await tx.guardian.findUnique({
                     where: { email: teacherData.email },
                 });
-                if (existingEmailInUser || existingEmailInGuardian) {
+                if (
+                    (existingEmailInUser || existingEmailInGuardian) &&
+                    teacherData.email !== ''
+                ) {
                     throw new BadRequestException('Email already used');
                 }
 
