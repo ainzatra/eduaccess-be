@@ -83,11 +83,7 @@ export class ActivityController {
 
         console.log('Audio files:', files.audios);
         console.log('Image files:', files.images);
-
-        // Set default category if not provided
-        if (!body.category) {
-            body.category = Condition.deaf;
-        }
+        console.log('Category:', schema.category);
 
         return this.service.createActivity(body, files);
     }

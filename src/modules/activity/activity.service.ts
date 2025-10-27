@@ -52,6 +52,7 @@ export class ActivityService {
             level,
             graded,
             questions,
+            category,
         } = updatedSchema;
 
         console.log('Question type before saving:', typeof questions);
@@ -68,6 +69,7 @@ export class ActivityService {
                 section_id: section.id,
                 teacher_id,
                 questions: JSON.stringify(questions),
+                category,
             },
         });
 

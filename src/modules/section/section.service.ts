@@ -25,6 +25,15 @@ export class SectionService {
         });
     }
 
+    async findAllWithDetails() {
+        const students = await this.prisma.user.findMany({
+            where: { role: 'student' },
+            include: { assigned_section: true },
+        });
+
+        return { students };
+    }
+
     async findOne(id: string) {
         return this.prisma.section.findUnique({
             where: { id },

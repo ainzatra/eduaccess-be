@@ -65,6 +65,9 @@ export class SectionController {
 
     @Get(':id')
     findOne(@Param('id') id: string) {
+        if (id === 'all') {
+            return this.service.findAllWithDetails();
+        }
         return this.service.findOne(id);
     }
 }
