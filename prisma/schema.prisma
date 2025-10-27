@@ -53,6 +53,11 @@ enum SubmissionStatus {
   pending
 }
 
+enum Condition {
+  deaf
+  speech_delay
+}
+
 model User {
   id                 String                     @id() @default(uuid())
   full_name          String
@@ -60,7 +65,7 @@ model User {
   password_hash      String
   role               String
   age                Int?
-  condition          String?
+  condition          Condition                  @default(deaf)
   avatar             String?
   nickname           String?
   gender             Gender?
@@ -104,6 +109,7 @@ model Subject {
   image             String?
   created_at        DateTime   @default(now())
   updated_at        DateTime   @updatedAt()
+  category          Condition  @default(deaf)
   assigned_sections Section[]  @relation("SectionSubjects")
   lessons           Lesson[]
   activities        Activity[]
@@ -157,6 +163,7 @@ model Activity {
   questions          String
   level              ActivityLevel
   graded             Boolean                    @default(false)
+  category           Condition                  @default(deaf)
   created_at         DateTime                   @default(now())
   updated_at         DateTime                   @updatedAt()
   subject_id         String

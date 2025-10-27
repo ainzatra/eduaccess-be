@@ -19,6 +19,7 @@ import {
 import { memoryStorage } from 'multer';
 import { ActivityService } from './activity.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
+import { Condition } from '@prisma/client';
 
 @UseGuards(AuthGuard)
 @Controller('activity')
@@ -82,6 +83,11 @@ export class ActivityController {
 
         console.log('Audio files:', files.audios);
         console.log('Image files:', files.images);
+
+        // Set default category if not provided
+        if (!body.category) {
+            body.category = Condition.deaf;
+        }
 
         return this.service.createActivity(body, files);
     }

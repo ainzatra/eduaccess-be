@@ -1,17 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
+import { ClsService } from 'nestjs-cls';
+import { Condition } from '@prisma/client';
 
 @Injectable()
 export class StudentService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly cls: ClsService,
+    ) {}
 
     async fetchMySection(id: string) {
+        // Get student's condition for filtering
+        const student = await this.prisma.user.findUnique({
+            where: { id },
+            select: { condition: true },
+        });
+
+        if (!student) throw new NotFoundException('Student not found');
+
         const section = await this.prisma.section.findFirst({
             where: {
                 students: { some: { id } },
             },
             include: {
                 subjects: {
+                    where: {
+                        category: student.condition as Condition,
+                    },
                     orderBy: {
                         title: 'asc',
                     },
@@ -30,6 +46,14 @@ export class StudentService {
     }
 
     async fetchMyActivities(id: string) {
+        // Get student's condition for filtering
+        const student = await this.prisma.user.findUnique({
+            where: { id },
+            select: { condition: true },
+        });
+
+        if (!student) throw new NotFoundException('Student not found');
+
         const section = await this.prisma.section.findFirst({
             where: {
                 students: {
@@ -45,6 +69,7 @@ export class StudentService {
         const activities = await this.prisma.activity.findMany({
             where: {
                 section_id: section.id,
+                category: student.condition as Condition,
             },
         });
 
@@ -82,6 +107,14 @@ export class StudentService {
             },
         });
 
+        // Get student's condition for filtering
+        const studentCondition = await this.prisma.user.findUnique({
+            where: { id },
+            select: { condition: true },
+        });
+
+        if (!studentCondition) throw new NotFoundException('Student not found');
+
         const subjects = await this.prisma.subject.findMany({
             where: {
                 assigned_sections: {
@@ -93,6 +126,7 @@ export class StudentService {
                         },
                     },
                 },
+                category: studentCondition.condition as Condition,
             },
             orderBy: {
                 title: 'asc',

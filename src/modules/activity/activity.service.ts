@@ -8,6 +8,8 @@ import { S3Service } from '../s3.service';
 import { smartUnion } from '@zenstackhq/runtime/zod-utils';
 import { EmailService } from '../email/email.service';
 import { NotificationService } from '../notification/notification.service';
+import { ClsService } from 'nestjs-cls';
+import { Condition } from '@prisma/client';
 
 @Injectable()
 export class ActivityService {
@@ -16,6 +18,7 @@ export class ActivityService {
         private readonly s3: S3Service,
         private readonly email: EmailService,
         private readonly notification: NotificationService,
+        private readonly cls: ClsService,
     ) {}
 
     async createActivity(data, files) {
@@ -264,11 +267,19 @@ export class ActivityService {
 
         if (!section) throw new NotFoundException();
 
+        // Build the base query
+        let activityWhere: any = {
+            section_id: section.id,
+            subject_id: subject,
+        };
+
+        // Add category filtering for students
+        if (user.role === 'student') {
+            activityWhere.category = user.condition as Condition;
+        }
+
         return this.prisma.activity.findMany({
-            where: {
-                section_id: section.id,
-                subject_id: subject,
-            },
+            where: activityWhere,
             include: {
                 submissions: {
                     where: {

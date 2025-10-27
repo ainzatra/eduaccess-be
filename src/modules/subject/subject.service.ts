@@ -4,24 +4,44 @@ import {
     InternalServerErrorException,
     NotFoundException,
 } from '@nestjs/common';
-import { Subject } from '@prisma/client';
+import { Subject, Condition } from '@prisma/client';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { S3Service } from '../s3.service';
+import { ClsService } from 'nestjs-cls';
 
 @Injectable()
 export class SubjectService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly s3: S3Service,
+        private readonly cls: ClsService,
     ) {}
 
     async findAll() {
-        return this.prisma.subject.findMany({
-            orderBy: { title: 'asc' },
-        });
+        const { role, condition } = this.cls.get('auth');
+
+        // If user is teacher or admin, show all subjects
+        if (role === 'teacher' || role === 'admin') {
+            return this.prisma.subject.findMany({
+                orderBy: { title: 'asc' },
+            });
+        }
+
+        // If user is student, only show subjects matching their condition
+        if (role === 'student') {
+            return this.prisma.subject.findMany({
+                where: {
+                    category: condition as Condition,
+                },
+                orderBy: { title: 'asc' },
+            });
+        }
+
+        // Default case - return empty array for unknown roles
+        return [];
     }
 
     async create(data: CreateSubjectDto, file?: any): Promise<Subject> {

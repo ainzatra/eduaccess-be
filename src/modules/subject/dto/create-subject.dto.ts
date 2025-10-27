@@ -1,15 +1,19 @@
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, IsEnum } from 'class-validator';
+import { Condition } from '@prisma/client';
 
 export class CreateSubjectDto {
     @IsString()
     @IsNotEmpty()
-    title: string
+    title: string;
 
     @IsString()
     @IsOptional()
-    description: string
+    description: string;
 
     @IsString()
     @IsOptional()
-    image: string
+    image: string;
+
+    @IsEnum(Condition)
+    category: Condition;
 }
