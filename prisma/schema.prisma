@@ -58,6 +58,12 @@ enum Condition {
   speech_delay
 }
 
+enum MaterialType {
+  video
+  image
+  subtitle
+}
+
 model User {
   id                 String                     @id() @default(uuid())
   full_name          String
@@ -81,6 +87,7 @@ model User {
   guardian           Guardian?
   todos              Todo[]
   created_activities Activity[]
+  learning_materials LearningMaterial[]         @relation("UserLearningMaterials")
   submissions        ActivitySubmission[]
   resetOtps          ResetOtp[]
   retake_permissions ActivityRetakePermission[]
@@ -116,25 +123,41 @@ model Subject {
 }
 
 model Lesson {
-  id           String        @id() @default(uuid())
-  title        String
-  video_url    String?
-  subtitle_url String?
-  created_at   DateTime      @default(now())
-  updated_at   DateTime      @updatedAt()
-  subject_id   String
-  subject      Subject       @relation(fields: [subject_id], references: [id])
-  created_by   String
-  creator      User          @relation("UserLessons", fields: [created_by], references: [id])
-  images       LessonImage[]
+  id         String           @id() @default(uuid())
+  title      String
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt()
+  subject_id String
+  subject    Subject          @relation(fields: [subject_id], references: [id])
+  created_by String
+  creator    User             @relation("UserLessons", fields: [created_by], references: [id])
+  materials  LessonMaterial[]
 }
 
-model LessonImage {
-  id         String   @id() @default(uuid())
-  url        String
-  created_at DateTime @default(now())
-  lesson_id  String
-  lesson     Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+model LearningMaterial {
+  id               String           @id() @default(uuid())
+  title            String
+  type             MaterialType
+  url              String?
+  s3_key           String?
+  file_size        Int
+  mime_type        String
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt()
+  created_by       String
+  creator          User             @relation("UserLearningMaterials", fields: [created_by], references: [id])
+  lesson_materials LessonMaterial[]
+}
+
+model LessonMaterial {
+  id          String           @id() @default(uuid())
+  created_at  DateTime         @default(now())
+  lesson_id   String
+  lesson      Lesson           @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  material_id String
+  material    LearningMaterial @relation(fields: [material_id], references: [id], onDelete: Cascade)
+
+  @@unique([lesson_id, material_id])
 }
 
 model Guardian {

@@ -18,6 +18,7 @@ import { EmailModule } from './modules/email/email.module';
 import { AnnouncementModule } from './modules/announcement/announcement.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { NarrativeReportModule } from './modules/narrative-report/narrative-report.module';
+import { LearningMaterialModule } from './modules/learning-material/learning-material.module';
 
 @Module({
     imports: [
@@ -43,6 +44,7 @@ import { NarrativeReportModule } from './modules/narrative-report/narrative-repo
         AnnouncementModule,
         PrismaModule,
         NarrativeReportModule,
+        LearningMaterialModule,
     ],
     controllers: [],
     providers: [

@@ -4,127 +4,91 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import { S3Service } from '../s3.service';
 
 @Injectable()
 export class LessonService {
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly s3: S3Service,
-    ) {}
+    constructor(private readonly prisma: PrismaService) {}
 
-    async createLesson(id: string, files, body) {
-        const video = files.video?.[0] ?? null;
-        const subtitle = files.subtitle?.[0] ?? null;
-        const images = files.images ?? [];
+    async createLesson(
+        userId: string,
+        body: { title: string; subjectId: string; materialIds: string[] },
+    ) {
+        const { title, subjectId, materialIds } = body;
 
-        // Validate that either video or images are present
-        if (!video && images.length === 0) {
-            throw new BadRequestException(
-                'Either video or at least one image must be provided',
-            );
-        }
-
-        // Validate video if present
-        if (video && video.mimetype !== 'video/mp4') {
-            throw new BadRequestException('Video must be .mp4');
-        }
-
-        // Validate subtitle if present
-        if (subtitle && subtitle.mimetype !== 'text/vtt') {
-            throw new BadRequestException('Subtitle must be .vtt');
-        }
-
-        // Validate images if present
-        const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        for (const image of images) {
-            if (!allowedImageTypes.includes(image.mimetype)) {
-                throw new BadRequestException(
-                    `Invalid image type: ${image.mimetype}. Allowed types: ${allowedImageTypes.join(', ')}`,
-                );
-            }
-        }
-
-        const { title, subjectId } = body;
-        console.log({ title, subjectId });
+        // Validate subject exists
         const subject = await this.prisma.subject.findUnique({
             where: { id: subjectId },
         });
 
-        if (!subject) throw new NotFoundException();
+        if (!subject) throw new NotFoundException('Subject not found');
 
-        // Create Lesson first to get ID
+        // Validate materials exist and get their types
+        const materials = await this.prisma.learningMaterial.findMany({
+            where: { id: { in: materialIds } },
+        });
+
+        if (materials.length !== materialIds.length) {
+            throw new BadRequestException('One or more materials not found');
+        }
+
+        // Validate material constraints (1 video, 1 subtitle, multiple images)
+        const videoCount = materials.filter((m) => m.type === 'video').length;
+        const subtitleCount = materials.filter(
+            (m) => m.type === 'subtitle',
+        ).length;
+
+        if (videoCount > 1) {
+            throw new BadRequestException('Only one video allowed per lesson');
+        }
+        if (subtitleCount > 1) {
+            throw new BadRequestException(
+                'Only one subtitle allowed per lesson',
+            );
+        }
+
+        // Create lesson
         const lesson = await this.prisma.lesson.create({
             data: {
                 title,
                 subject_id: subjectId,
-                created_by: id,
+                created_by: userId,
             },
         });
 
-        // Upload video if present
-        let video_url = '';
-        if (video) {
-            const videoKey = `lessons/${lesson.id}/${video.originalname}`;
-            console.log({ videoKey });
-            video_url = await this.s3.upload(video, videoKey);
-        }
+        // Associate materials with lesson
+        const lessonMaterials = materialIds.map((materialId) => ({
+            lesson_id: lesson.id,
+            material_id: materialId,
+        }));
 
-        // Upload subtitle if present
-        let subtitle_url = '';
-        if (subtitle) {
-            const subtitleKey = `lessons/${lesson.id}/${subtitle.originalname}`;
-            console.log({ subtitleKey });
-            subtitle_url = await this.s3.upload(subtitle, subtitleKey);
-        }
-
-        // Upload images if present
-        const imageUrls: string[] = [];
-        for (const [index, image] of images.entries()) {
-            const imageKey = `lessons/${lesson.id}/images/${image.originalname}`;
-            console.log({ imageKey });
-            const url = await this.s3.upload(image, imageKey);
-            imageUrls.push(url);
-        }
-
-        // Update lesson with video and subtitle URLs
-        await this.prisma.lesson.update({
-            where: { id: lesson.id },
-            data: {
-                video_url,
-                subtitle_url,
-            },
+        await this.prisma.lessonMaterial.createMany({
+            data: lessonMaterials,
         });
 
-        // Create image records if images were uploaded
-        if (imageUrls.length > 0) {
-            const imageData = imageUrls.map((url) => ({
-                url,
-                lesson_id: lesson.id,
-            }));
-
-            await this.prisma.lessonImage.createMany({
-                data: imageData,
-            });
-        }
-
-        return 'Lesson created successfully';
+        return this.findLesson(lesson.id);
     }
 
     async findLesson(id: string) {
-        return this.prisma.lesson.findUnique({
+        const lesson = await this.prisma.lesson.findUnique({
             where: { id },
             include: {
                 subject: {
                     select: {
                         id: true,
+                        title: true,
                     },
                 },
-                images: {
-                    select: {
-                        id: true,
-                        url: true,
-                        created_at: true,
+                materials: {
+                    include: {
+                        material: {
+                            select: {
+                                id: true,
+                                title: true,
+                                type: true,
+                                url: true,
+                                created_at: true,
+                            },
+                        },
                     },
                     orderBy: {
                         created_at: 'asc',
@@ -132,9 +96,116 @@ export class LessonService {
                 },
             },
         });
+
+        if (!lesson) {
+            throw new NotFoundException('Lesson not found');
+        }
+
+        // Group materials by type for easier frontend consumption
+        const groupedMaterials: {
+            video: any | null;
+            subtitle: any | null;
+            images: any[];
+        } = {
+            video: null,
+            subtitle: null,
+            images: [],
+        };
+
+        lesson.materials.forEach((lm) => {
+            const material = lm.material;
+            if (material.type === 'video') {
+                groupedMaterials.video = material;
+            } else if (material.type === 'subtitle') {
+                groupedMaterials.subtitle = material;
+            } else if (material.type === 'image') {
+                groupedMaterials.images.push(material);
+            }
+        });
+
+        return {
+            ...lesson,
+            materials: groupedMaterials,
+        };
     }
 
-    async deleteLesson(id: string) {
+    async updateLessonMaterials(
+        lessonId: string,
+        userId: string,
+        materialIds: string[],
+    ) {
+        // Verify lesson ownership
+        const lesson = await this.prisma.lesson.findUnique({
+            where: { id: lessonId },
+        });
+
+        if (!lesson) {
+            throw new NotFoundException('Lesson not found');
+        }
+
+        if (lesson.created_by !== userId) {
+            throw new BadRequestException(
+                'You can only update your own lessons',
+            );
+        }
+
+        // Validate materials
+        const materials = await this.prisma.learningMaterial.findMany({
+            where: { id: { in: materialIds } },
+        });
+
+        if (materials.length !== materialIds.length) {
+            throw new BadRequestException('One or more materials not found');
+        }
+
+        // Validate material constraints
+        const videoCount = materials.filter((m) => m.type === 'video').length;
+        const subtitleCount = materials.filter(
+            (m) => m.type === 'subtitle',
+        ).length;
+
+        if (videoCount > 1) {
+            throw new BadRequestException('Only one video allowed per lesson');
+        }
+        if (subtitleCount > 1) {
+            throw new BadRequestException(
+                'Only one subtitle allowed per lesson',
+            );
+        }
+
+        // Remove existing material associations
+        await this.prisma.lessonMaterial.deleteMany({
+            where: { lesson_id: lessonId },
+        });
+
+        // Create new associations
+        const lessonMaterials = materialIds.map((materialId) => ({
+            lesson_id: lessonId,
+            material_id: materialId,
+        }));
+
+        await this.prisma.lessonMaterial.createMany({
+            data: lessonMaterials,
+        });
+
+        return this.findLesson(lessonId);
+    }
+
+    async deleteLesson(id: string, userId: string) {
+        const lesson = await this.prisma.lesson.findUnique({
+            where: { id },
+        });
+
+        if (!lesson) {
+            throw new NotFoundException('Lesson not found');
+        }
+
+        if (lesson.created_by !== userId) {
+            throw new BadRequestException(
+                'You can only delete your own lessons',
+            );
+        }
+
         return this.prisma.lesson.delete({
             where: { id },
         });

@@ -54,6 +54,12 @@ enum Condition {
     speech_delay
 }
 
+enum MaterialType {
+    video
+    image
+    subtitle
+}
+
 model User {
     id               String    @id @default(uuid())
     full_name        String
@@ -92,6 +98,9 @@ model User {
 
     // Teacher Created Activities
     created_activities Activity[]
+
+    // Teacher Created Learning Materials
+    learning_materials LearningMaterial[] @relation("UserLearningMaterials")
 
     // activities    Activity[]      @relation("UserActivities")
     submissions   ActivitySubmission[]
@@ -155,8 +164,6 @@ model Subject {
 model Lesson {
     id           String   @id @default(uuid())
     title        String
-    video_url    String?
-    subtitle_url String?
     created_at   DateTime @default(now())
     updated_at   DateTime @updatedAt
 
@@ -166,7 +173,8 @@ model Lesson {
     created_by   String
     creator      User     @relation("UserLessons", fields: [created_by], references: [id])
 
-    images       LessonImage[]
+    // New relationship to materials
+    materials    LessonMaterial[]
 
     // activities   Activity[]
 
@@ -177,14 +185,40 @@ model Lesson {
     @@allow('read', true)
 }
 
-model LessonImage {
-    id        String   @id @default(uuid())
-    url       String
-    created_at DateTime @default(now())
+model LearningMaterial {
+    id          String   @id @default(uuid())
+    title       String
+    type        MaterialType
+    url         String?
+    s3_key      String?
+    file_size   Int
+    mime_type   String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
     
-    lesson_id String
-    lesson    Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+    created_by  String
+    creator     User     @relation("UserLearningMaterials", fields: [created_by], references: [id])
     
+    // Materials used in lessons
+    lesson_materials LessonMaterial[]
+    
+    @@allow('create', auth().role == 'teacher')
+    @@allow('read', auth().role == 'teacher' || auth().role == 'admin')
+    @@allow('update', auth().role == 'teacher' && created_by == auth().id)
+    @@allow('delete', auth().role == 'teacher' && created_by == auth().id)
+}
+
+model LessonMaterial {
+    id                  String   @id @default(uuid())
+    created_at          DateTime @default(now())
+    
+    lesson_id           String
+    lesson              Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+    
+    material_id         String
+    material            LearningMaterial @relation(fields: [material_id], references: [id], onDelete: Cascade)
+    
+    @@unique([lesson_id, material_id])
 }
 
 model Guardian {

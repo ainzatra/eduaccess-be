@@ -50,6 +50,10 @@ export class UsersService {
             password_hash: hashedPassword,
         };
 
+        if (data.role === 'student') {
+            data['condition'] = body.condition;
+        }
+
         return this.prisma.user.create({ data });
     }
 

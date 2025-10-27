@@ -5,38 +5,28 @@ import {
     Get,
     Param,
     Post,
-    UploadedFiles,
-    UseInterceptors,
+    Put,
+    UseGuards,
 } from '@nestjs/common';
 import { LessonService } from './lesson.service';
-import {
-    FileFieldsInterceptor,
-    FilesInterceptor,
-} from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
+import { AuthGuard } from '../auth/guard/auth.guard';
+import { ClsService } from 'nestjs-cls';
 
+@UseGuards(AuthGuard)
 @Controller('lesson')
 export class LessonController {
-    constructor(private readonly service: LessonService) {}
+    constructor(
+        private readonly service: LessonService,
+        private readonly cls: ClsService,
+    ) {}
 
     @Post('subject/:id')
-    @UseInterceptors(
-        FileFieldsInterceptor(
-            [
-                { name: 'video', maxCount: 1 },
-                { name: 'subtitle', maxCount: 1 },
-                { name: 'images', maxCount: 10 },
-            ],
-            { storage: memoryStorage() },
-        ),
-    )
     createLesson(
-        @Param('id') id: string,
-        @UploadedFiles() files,
-        @Body() body,
+        @Param('id') subjectId: string,
+        @Body() body: { title: string; materialIds: string[] },
     ) {
-        console.log({ id, body });
-        return this.service.createLesson(id, files, body);
+        const userId = this.cls.get('auth')?.id;
+        return this.service.createLesson(userId, { ...body, subjectId });
     }
 
     @Get(':id')
@@ -44,8 +34,18 @@ export class LessonController {
         return this.service.findLesson(id);
     }
 
+    @Put(':id/materials')
+    updateLessonMaterials(
+        @Param('id') id: string,
+        @Body() body: { materialIds: string[] },
+    ) {
+        const userId = this.cls.get('auth')?.id;
+        return this.service.updateLessonMaterials(id, userId, body.materialIds);
+    }
+
     @Delete(':id')
     deleteLesson(@Param('id') id: string) {
-        return this.service.deleteLesson(id);
+        const userId = this.cls.get('auth')?.id;
+        return this.service.deleteLesson(id, userId);
     }
 }
