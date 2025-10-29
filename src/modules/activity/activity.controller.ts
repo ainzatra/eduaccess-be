@@ -97,9 +97,59 @@ export class ActivityController {
     }
 
     @Post('submit/:studentId')
-    submitActivity(@Param('studentId') studentId: string, @Body() body) {
+    @UseInterceptors(
+        AnyFilesInterceptor({
+            storage: memoryStorage(),
+            fileFilter: (req, file, cb) => {
+                // Check if the file is an audio file
+                const allowedMimeTypes = [
+                    'audio/mpeg', // mp3
+                    'audio/wav', // wav
+                    'audio/webm', // webm
+                    'audio/mp3', // mp3 (alternative mime type)
+                    'audio/x-wav', // wav (alternative mime type)
+                ];
+
+                if (allowedMimeTypes.includes(file.mimetype)) {
+                    cb(null, true);
+                } else {
+                    cb(
+                        new BadRequestException(
+                            `Invalid audio format. Supported formats: mp3, wav, webm`,
+                        ),
+                        false,
+                    );
+                }
+            },
+            limits: {
+                fileSize: 20 * 1024 * 1024, // 20MB per file
+                files: 50, // Maximum 50 audio files
+            },
+        }),
+    )
+    async submitActivity(
+        @Param('studentId') studentId: string,
+        @Body() body: any,
+        @UploadedFiles() files: Express.Multer.File[],
+    ) {
         console.log('submit activity', studentId, body);
-        return this.service.submitActivity(studentId, body);
+        console.log('Audio files received:', files?.length || 0);
+
+        // Extract audio files from the request
+        const audioFiles: { [key: string]: Express.Multer.File } = {};
+
+        if (files && files.length > 0) {
+            files.forEach((file) => {
+                // Extract question ID from fieldname (e.g., "audio_q1" -> "q1")
+                const match = file.fieldname.match(/^audio_(.+)$/);
+                if (match) {
+                    const questionId = match[1];
+                    audioFiles[questionId] = file;
+                }
+            });
+        }
+
+        return this.service.submitActivity(studentId, body, audioFiles);
     }
 
     @Get('submissions/:activityId')

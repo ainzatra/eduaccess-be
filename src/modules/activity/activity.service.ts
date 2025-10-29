@@ -314,7 +314,11 @@ export class ActivityService {
         });
     }
 
-    async submitActivity(studentId: string, body) {
+    async submitActivity(
+        studentId: string,
+        body,
+        audioFiles?: { [key: string]: Express.Multer.File },
+    ) {
         const activity = await this.prisma.activity.findUnique({
             where: { id: body.activityId },
             include: {
@@ -328,9 +332,41 @@ export class ActivityService {
 
         if (!activity) throw new NotFoundException('Activity not found');
 
+        // Get student information to check condition
+        const student = await this.prisma.user.findUnique({
+            where: { id: studentId },
+        });
+
+        if (!student) throw new NotFoundException('Student not found');
+
+        // Parse answers from body
+        let answers =
+            typeof body.answers === 'string'
+                ? JSON.parse(body.answers)
+                : body.answers;
+
+        // Process audio files if provided
+        if (audioFiles && Object.keys(audioFiles).length > 0) {
+            answers = await this.processAudioFiles(
+                answers,
+                audioFiles,
+                studentId,
+                body.activityId,
+            );
+        }
+
+        // Validate audio requirements for speech delay students
+        if (student.condition === 'speech_delay') {
+            await this.validateAudioRequirements(
+                answers,
+                audioFiles,
+                JSON.parse(activity.questions),
+            );
+        }
+
         if (activity.graded) {
             body.score = this.computeScore(
-                body.answers,
+                answers,
                 JSON.parse(activity.questions),
             );
         }
@@ -385,7 +421,7 @@ export class ActivityService {
                 activity_id: body.activityId,
                 student_id: studentId,
                 score: activity.graded ? body.score : 0,
-                schema: JSON.stringify(body.answers),
+                schema: JSON.stringify(answers), // Use processed answers with audio URLs
                 status: activity.graded ? 'graded' : 'pending',
                 version: version,
                 is_latest: true,
@@ -405,12 +441,6 @@ export class ActivityService {
                 },
             });
         }
-
-        const student = await this.prisma.user.findUnique({
-            where: {
-                id: studentId,
-            },
-        });
 
         const message = `
             <p>Dear Teacher,</p>
@@ -681,5 +711,76 @@ export class ActivityService {
         });
 
         return submissions;
+    }
+
+    /**
+     * Process audio files and upload them to S3
+     * Updates the answers array to include audio URLs
+     */
+    private async processAudioFiles(
+        answers: any[],
+        audioFiles: { [key: string]: Express.Multer.File },
+        studentId: string,
+        activityId: string,
+    ): Promise<any[]> {
+        const processedAnswers = [...answers];
+
+        for (const answer of processedAnswers) {
+            const questionId = answer.questionId;
+
+            // Check if there's an audio file for this question
+            if (audioFiles[questionId]) {
+                const audioFile = audioFiles[questionId];
+
+                // Create unique key for S3
+                const timestamp = Date.now();
+                const fileExtension = audioFile.originalname.split('.').pop();
+                const key = `activity-submissions/audio/${studentId}/${activityId}/${questionId}_${timestamp}.${fileExtension}`;
+
+                // Upload to S3
+                const audioUrl = await this.s3.upload(audioFile, key);
+
+                // Add audio URL to the answer
+                answer.audioUrl = audioUrl;
+
+                console.log(
+                    `Uploaded audio for question ${questionId}: ${audioUrl}`,
+                );
+            }
+        }
+
+        return processedAnswers;
+    }
+
+    /**
+     * Validate that speech delay students provide audio recordings for all questions
+     */
+    private async validateAudioRequirements(
+        answers: any[],
+        audioFiles: { [key: string]: Express.Multer.File } | undefined,
+        questions: any[],
+    ): Promise<void> {
+        const missingAudioQuestions: string[] = [];
+
+        for (const question of questions) {
+            const questionId = question.id;
+
+            // Check if there's an answer for this question
+            const answer = answers.find((a) => a.questionId === questionId);
+            if (!answer) {
+                continue; // Skip if no answer provided
+            }
+
+            // Check if audio file is provided for this question
+            if (!audioFiles || !audioFiles[questionId]) {
+                missingAudioQuestions.push(questionId);
+            }
+        }
+
+        if (missingAudioQuestions.length > 0) {
+            throw new BadRequestException(
+                `Audio recordings are required for speech delay students. Missing audio for questions: ${missingAudioQuestions.join(', ')}`,
+            );
+        }
     }
 }
