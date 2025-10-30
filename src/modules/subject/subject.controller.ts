@@ -9,6 +9,7 @@ import {
     UploadedFile,
     Put,
     Param,
+    Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -16,6 +17,7 @@ import { SubjectService } from './subject.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { Condition } from '@prisma/client';
+import type { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @UseGuards(AuthGuard)
 @Controller('subject')
@@ -23,8 +25,8 @@ export class SubjectController {
     constructor(private readonly service: SubjectService) {}
 
     @Get()
-    findAll() {
-        return this.service.findAll();
+    findAll(@Req() req: SchoolYearRequest) {
+        return this.service.findAll(req);
     }
 
     @Get(':id/lessons')
@@ -34,12 +36,16 @@ export class SubjectController {
     // Accept multipart/form-data with an optional "image" file (stored in memory so service can upload buffer to S3)
     @Post()
     @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
-    create(@UploadedFile() file: any, @Body() data: CreateSubjectDto) {
+    create(
+        @UploadedFile() file: any,
+        @Body() data: CreateSubjectDto,
+        @Req() req: SchoolYearRequest,
+    ) {
         // Set default category if not provided
         if (!data.category) {
             data.category = Condition.deaf;
         }
-        return this.service.create(data, file);
+        return this.service.create(data, file, req);
     }
 
     @Delete()

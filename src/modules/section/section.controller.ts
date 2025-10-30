@@ -7,11 +7,13 @@ import {
     Post,
     UseGuards,
     Put,
+    Req,
 } from '@nestjs/common';
 import { SectionService } from './section.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { AddStudentDto } from './dto/add-student.dto';
+import type { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @UseGuards(AuthGuard)
 @Controller('section')
@@ -19,13 +21,13 @@ export class SectionController {
     constructor(private readonly service: SectionService) {}
 
     @Get()
-    findAll() {
-        return this.service.findAllTable();
+    findAll(@Req() req: SchoolYearRequest) {
+        return this.service.findAllTable(req);
     }
 
     @Post()
-    create(@Body() data: CreateSectionDto) {
-        return this.service.create(data);
+    create(@Body() data: CreateSectionDto, @Req() req: SchoolYearRequest) {
+        return this.service.create(data, req);
     }
 
     @Put('/update-teacher/:id')
@@ -64,10 +66,10 @@ export class SectionController {
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string) {
+    findOne(@Param('id') id: string, @Req() req: SchoolYearRequest) {
         if (id === 'all') {
-            return this.service.findAllWithDetails();
+            return this.service.findAllWithDetails(req);
         }
-        return this.service.findOne(id);
+        return this.service.findOne(id, req);
     }
 }

@@ -11,6 +11,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { S3Service } from '../s3.service';
 import { ClsService } from 'nestjs-cls';
+import { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @Injectable()
 export class SubjectService {
@@ -20,12 +21,14 @@ export class SubjectService {
         private readonly cls: ClsService,
     ) {}
 
-    async findAll() {
+    async findAll(req?: SchoolYearRequest) {
         const { role, condition } = this.cls.get('auth');
+        const schoolYear = req?.schoolYear || '2025-2026';
 
         // If user is teacher or admin, show all subjects
         if (role === 'teacher' || role === 'admin') {
             return this.prisma.subject.findMany({
+                where: { school_year: schoolYear },
                 orderBy: { title: 'asc' },
             });
         }
@@ -35,6 +38,7 @@ export class SubjectService {
             return this.prisma.subject.findMany({
                 where: {
                     category: condition as Condition,
+                    school_year: schoolYear,
                 },
                 orderBy: { title: 'asc' },
             });
@@ -44,8 +48,13 @@ export class SubjectService {
         return [];
     }
 
-    async create(data: CreateSubjectDto, file?: any): Promise<Subject> {
+    async create(
+        data: CreateSubjectDto,
+        file?: any,
+        req?: SchoolYearRequest,
+    ): Promise<Subject> {
         let imageUrl: string | undefined = data.image;
+        const schoolYear = req?.schoolYear || '2025-2026';
 
         if (file) {
             const key = `subjects/${Date.now()}-${randomUUID()}-${(file.originalname || 'upload').replace(/\s+/g, '_')}`;
@@ -58,7 +67,12 @@ export class SubjectService {
             data.image = '';
         }
 
-        return this.prisma.subject.create({ data });
+        return this.prisma.subject.create({
+            data: {
+                ...data,
+                school_year: schoolYear,
+            },
+        });
     }
 
     async update(

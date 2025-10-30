@@ -7,10 +7,12 @@ import {
     Post,
     Put,
     UseGuards,
+    Req,
 } from '@nestjs/common';
 import { LessonService } from './lesson.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { ClsService } from 'nestjs-cls';
+import type { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @UseGuards(AuthGuard)
 @Controller('lesson')
@@ -24,14 +26,15 @@ export class LessonController {
     createLesson(
         @Param('id') subjectId: string,
         @Body() body: { title: string; materialIds: string[] },
+        @Req() req: SchoolYearRequest,
     ) {
         const userId = this.cls.get('auth')?.id;
-        return this.service.createLesson(userId, { ...body, subjectId });
+        return this.service.createLesson(userId, { ...body, subjectId }, req);
     }
 
     @Get(':id')
-    fetchLesson(@Param('id') id: string) {
-        return this.service.findLesson(id);
+    fetchLesson(@Param('id') id: string, @Req() req: SchoolYearRequest) {
+        return this.service.findLesson(id, req);
     }
 
     @Put(':id/materials')

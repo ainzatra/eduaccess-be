@@ -15,6 +15,7 @@ import bcrypt from 'bcrypt';
 import { ClsService } from 'nestjs-cls';
 import { S3Service } from '../s3.service';
 import { randomUUID } from 'crypto';
+import { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @Injectable()
 export class UsersService {
@@ -120,11 +121,16 @@ export class UsersService {
         return user;
     }
 
-    async findTeachers(): Promise<User[]> {
+    async findTeachers(req?: SchoolYearRequest): Promise<User[]> {
+        const schoolYear = req?.schoolYear || '2025-2026';
         const teachers = await this.prisma.user.findMany({
             where: {
                 role: 'teacher',
-                sections_taught: { none: {} },
+                sections_taught: {
+                    none: {
+                        school_year: schoolYear,
+                    },
+                },
                 archived: false,
             },
             orderBy: { full_name: 'asc' },
@@ -133,11 +139,16 @@ export class UsersService {
         return teachers;
     }
 
-    async findAvailableStudents(): Promise<User[]> {
+    async findAvailableStudents(req?: SchoolYearRequest): Promise<User[]> {
+        const schoolYear = req?.schoolYear || '2025-2026';
         const students = await this.prisma.user.findMany({
             where: {
                 role: 'student',
-                assigned_section: { none: {} },
+                assigned_section: {
+                    none: {
+                        school_year: schoolYear,
+                    },
+                },
                 archived: false,
             },
             orderBy: { full_name: 'asc' },

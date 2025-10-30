@@ -11,6 +11,7 @@ import {
     UploadedFiles,
     UseGuards,
     UseInterceptors,
+    Req,
 } from '@nestjs/common';
 import {
     AnyFilesInterceptor,
@@ -20,6 +21,7 @@ import { memoryStorage } from 'multer';
 import { ActivityService } from './activity.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { Condition } from '@prisma/client';
+import type { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @UseGuards(AuthGuard)
 @Controller('activity')
@@ -75,6 +77,7 @@ export class ActivityController {
             audios?: Express.Multer.File[];
             images?: Express.Multer.File[];
         },
+        @Req() req: SchoolYearRequest,
     ) {
         console.log('Create activity body', body);
         const schema = JSON.parse(body.schema);
@@ -85,15 +88,16 @@ export class ActivityController {
         console.log('Image files:', files.images);
         console.log('Category:', schema.category);
 
-        return this.service.createActivity(body, files);
+        return this.service.createActivity(body, files, req);
     }
 
     @Get('/user/:userId')
     fetchSubjectActivities(
         @Param('userId') id: string,
         @Query('subject') subject: string,
+        @Req() req: SchoolYearRequest,
     ) {
-        return this.service.fetchSubjectActivities(id, subject);
+        return this.service.fetchSubjectActivities(id, subject, req);
     }
 
     @Post('submit/:studentId')

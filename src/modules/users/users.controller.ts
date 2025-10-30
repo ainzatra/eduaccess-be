@@ -9,12 +9,14 @@ import {
     UploadedFiles,
     UseGuards,
     UseInterceptors,
+    Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import type { SchoolYearRequest } from '../school-year/school-year.middleware';
 // @UseGuards(AuthGuard)
 @Controller('users')
 export class UsersController {
@@ -40,13 +42,13 @@ export class UsersController {
     }
 
     @Get('/teachers')
-    findTeachers() {
-        return this.service.findTeachers();
+    findTeachers(@Req() req: SchoolYearRequest) {
+        return this.service.findTeachers(req);
     }
 
     @Get('/available-students')
-    findAvailableStudents() {
-        return this.service.findAvailableStudents();
+    findAvailableStudents(@Req() req: SchoolYearRequest) {
+        return this.service.findAvailableStudents(req);
     }
 
     @Put(':id/archive')

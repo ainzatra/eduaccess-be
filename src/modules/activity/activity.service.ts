@@ -10,6 +10,7 @@ import { EmailService } from '../email/email.service';
 import { NotificationService } from '../notification/notification.service';
 import { ClsService } from 'nestjs-cls';
 import { Condition } from '@prisma/client';
+import { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @Injectable()
 export class ActivityService {
@@ -21,12 +22,14 @@ export class ActivityService {
         private readonly cls: ClsService,
     ) {}
 
-    async createActivity(data, files) {
+    async createActivity(data, files, req?: SchoolYearRequest) {
         const { teacher_id, schema } = data;
+        const schoolYear = req?.schoolYear || '2025-2026';
 
         const section = await this.prisma.section.findFirst({
             where: {
                 teacher_id,
+                school_year: schoolYear,
             },
         });
 
@@ -70,6 +73,7 @@ export class ActivityService {
                 teacher_id,
                 questions: JSON.stringify(questions),
                 category,
+                school_year: schoolYear,
             },
         });
 
@@ -239,10 +243,15 @@ export class ActivityService {
         return score;
     }
 
-    async fetchSubjectActivities(id: string, subject: string) {
+    async fetchSubjectActivities(
+        id: string,
+        subject: string,
+        req?: SchoolYearRequest,
+    ) {
         const user = await this.prisma.user.findUnique({
             where: { id },
         });
+        const schoolYear = req?.schoolYear || '2025-2026';
 
         if (!user) throw new NotFoundException('User not found');
 
@@ -251,6 +260,7 @@ export class ActivityService {
         if (user.role === 'teacher') {
             where = {
                 teacher_id: user.id,
+                school_year: schoolYear,
             };
         } else if (user.role === 'student') {
             where = {
@@ -259,6 +269,7 @@ export class ActivityService {
                         id: user.id,
                     },
                 },
+                school_year: schoolYear,
             };
         } else {
             throw new BadRequestException('Not a student or teacher');
@@ -273,6 +284,7 @@ export class ActivityService {
         let activityWhere: any = {
             section_id: section.id,
             subject_id: subject,
+            school_year: schoolYear,
         };
 
         // Add category filtering for students
@@ -359,7 +371,6 @@ export class ActivityService {
         if (student.condition === 'speech_delay') {
             await this.validateAudioRequirements(
                 answers,
-                audioFiles,
                 JSON.parse(activity.questions),
             );
         }
@@ -757,7 +768,6 @@ export class ActivityService {
      */
     private async validateAudioRequirements(
         answers: any[],
-        audioFiles: { [key: string]: Express.Multer.File } | undefined,
         questions: any[],
     ): Promise<void> {
         const missingAudioQuestions: string[] = [];
@@ -771,8 +781,8 @@ export class ActivityService {
                 continue; // Skip if no answer provided
             }
 
-            // Check if audio file is provided for this question
-            if (!audioFiles || !audioFiles[questionId]) {
+            // Check if audio URL is present in the processed answer
+            if (!answer.audioUrl) {
                 missingAudioQuestions.push(questionId);
             }
         }

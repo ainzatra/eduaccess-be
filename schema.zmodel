@@ -60,6 +60,16 @@ enum MaterialType {
     subtitle
 }
 
+model SchoolYear {
+    id        String   @id @default(uuid())
+    year      String   @unique // e.g., "2025-2026"
+    isActive  Boolean  @default(false)
+    createdAt DateTime @default(now())
+    
+    @@allow('all', auth().role == 'admin')
+    @@allow('read', true)
+}
+
 model User {
     id               String    @id @default(uuid())
     full_name        String
@@ -149,6 +159,7 @@ model Subject {
     created_at        DateTime  @default(now())
     updated_at        DateTime  @updatedAt
     category          Condition @default(deaf)
+    school_year       String    @default("2025-2026")
 
     assigned_sections Section[] @relation('SectionSubjects')
 
@@ -166,6 +177,7 @@ model Lesson {
     title        String
     created_at   DateTime @default(now())
     updated_at   DateTime @updatedAt
+    school_year  String   @default("2025-2026")
 
     subject_id   String
     subject      Subject  @relation(fields: [subject_id], references: [id])
@@ -195,6 +207,7 @@ model LearningMaterial {
     mime_type   String
     created_at  DateTime @default(now())
     updated_at  DateTime @updatedAt
+    school_year String   @default("2025-2026")
     
     created_by  String
     creator     User     @relation("UserLearningMaterials", fields: [created_by], references: [id])
@@ -235,6 +248,7 @@ model Todo {
     id String @id @default(uuid())
     title String
     completed Boolean @default(false)
+    school_year String @default("2025-2026")
     teacher_id String
     teacher User @relation(fields: [teacher_id], references: [id])
 }
@@ -249,6 +263,7 @@ model Activity {
   level        ActivityLevel
   graded       Boolean  @default(false)
   category     Condition @default(deaf)
+  school_year  String   @default("2025-2026")
 
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
@@ -314,6 +329,7 @@ model Notification {
     type        NotificationType @default(new_activity)
     isRead      Boolean     @default(false)
     createdAt   DateTime    @default(now())
+    school_year String      @default("2025-2026")
 
     subject_id  String
     activity_id String
@@ -326,6 +342,7 @@ model Announcement {
     title       String
     description String?
     createdAt   DateTime    @default(now())
+    school_year String      @default("2025-2026")
 
     section_id  String
     section     Section     @relation(fields: [section_id], references: [id])

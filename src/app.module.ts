@@ -19,6 +19,7 @@ import { AnnouncementModule } from './modules/announcement/announcement.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { NarrativeReportModule } from './modules/narrative-report/narrative-report.module';
 import { LearningMaterialModule } from './modules/learning-material/learning-material.module';
+import { SchoolYearModule } from './modules/school-year/school-year.module';
 
 @Module({
     imports: [
@@ -45,6 +46,7 @@ import { LearningMaterialModule } from './modules/learning-material/learning-mat
         PrismaModule,
         NarrativeReportModule,
         LearningMaterialModule,
+        SchoolYearModule,
     ],
     controllers: [],
     providers: [

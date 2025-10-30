@@ -4,6 +4,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
+import { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @Injectable()
 export class LessonService {
@@ -12,19 +13,21 @@ export class LessonService {
     async createLesson(
         userId: string,
         body: { title: string; subjectId: string; materialIds: string[] },
+        req?: SchoolYearRequest,
     ) {
         const { title, subjectId, materialIds } = body;
+        const schoolYear = req?.schoolYear || '2025-2026';
 
         // Validate subject exists
         const subject = await this.prisma.subject.findUnique({
-            where: { id: subjectId },
+            where: { id: subjectId, school_year: schoolYear },
         });
 
         if (!subject) throw new NotFoundException('Subject not found');
 
         // Validate materials exist and get their types
         const materials = await this.prisma.learningMaterial.findMany({
-            where: { id: { in: materialIds } },
+            where: { id: { in: materialIds }, school_year: schoolYear },
         });
 
         if (materials.length !== materialIds.length) {
@@ -52,6 +55,7 @@ export class LessonService {
                 title,
                 subject_id: subjectId,
                 created_by: userId,
+                school_year: schoolYear,
             },
         });
 
@@ -65,12 +69,13 @@ export class LessonService {
             data: lessonMaterials,
         });
 
-        return this.findLesson(lesson.id);
+        return this.findLesson(lesson.id, req);
     }
 
-    async findLesson(id: string) {
-        const lesson = await this.prisma.lesson.findUnique({
-            where: { id },
+    async findLesson(id: string, req?: SchoolYearRequest) {
+        const schoolYear = req?.schoolYear || '2025-2026';
+        const lesson = await this.prisma.lesson.findFirst({
+            where: { id, school_year: schoolYear },
             include: {
                 subject: {
                     select: {

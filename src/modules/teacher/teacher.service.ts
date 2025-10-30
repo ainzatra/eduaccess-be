@@ -1,15 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
+import { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @Injectable()
 export class TeacherService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async fetchMySection(id: string) {
+    async fetchMySection(id: string, req?: SchoolYearRequest) {
         console.log('Fetching teacher section');
+        const schoolYear = req?.schoolYear || '2025-2026';
         const section = await this.prisma.section.findFirst({
             where: {
                 teacher_id: id,
+                school_year: schoolYear,
             },
             include: {
                 subjects: {
@@ -28,10 +31,12 @@ export class TeacherService {
         return section;
     }
 
-    async fetchMyActivities(id: string) {
+    async fetchMyActivities(id: string, req?: SchoolYearRequest) {
+        const schoolYear = req?.schoolYear || '2025-2026';
         const section = await this.prisma.section.findFirst({
             where: {
                 teacher_id: id,
+                school_year: schoolYear,
             },
         });
 
@@ -46,10 +51,12 @@ export class TeacherService {
         return activities;
     }
 
-    async fetchMyTodos(id: string) {
+    async fetchMyTodos(id: string, req?: SchoolYearRequest) {
+        const schoolYear = req?.schoolYear || '2025-2026';
         const section = await this.prisma.section.findFirst({
             where: {
                 teacher_id: id,
+                school_year: schoolYear,
             },
         });
 
@@ -88,11 +95,15 @@ export class TeacherService {
         return todos;
     }
 
-    async fetchTeacherDetails(id: string) {
+    async fetchTeacherDetails(id: string, req?: SchoolYearRequest) {
+        const schoolYear = req?.schoolYear || '2025-2026';
         const teacher = await this.prisma.user.findUnique({
             where: { id, role: 'teacher' },
             include: {
                 sections_taught: {
+                    where: {
+                        school_year: schoolYear,
+                    },
                     select: {
                         name: true,
                         id: true,
@@ -108,6 +119,7 @@ export class TeacherService {
                 assigned_sections: {
                     some: {
                         teacher_id: id,
+                        school_year: schoolYear,
                     },
                 },
             },
@@ -120,6 +132,7 @@ export class TeacherService {
             where: {
                 section: {
                     teacher_id: id,
+                    school_year: schoolYear,
                 },
             },
         });

@@ -4,17 +4,30 @@ import { ENHANCED_PRISMA } from '@zenstackhq/server/nestjs';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { AddStudentDto } from './dto/add-student.dto';
+import { Request } from 'express';
+import { SchoolYearRequest } from '../school-year/school-year.middleware';
 
 @Injectable()
 export class SectionService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async create(data: CreateSectionDto): Promise<Section> {
-        return this.prisma.section.create({ data });
+    async create(
+        data: CreateSectionDto,
+        req?: SchoolYearRequest,
+    ): Promise<Section> {
+        const schoolYear = req?.schoolYear || '2025-2026';
+        return this.prisma.section.create({
+            data: {
+                ...data,
+                school_year: schoolYear,
+            },
+        });
     }
 
-    async findAllTable(): Promise<Section[]> {
+    async findAllTable(req?: SchoolYearRequest): Promise<Section[]> {
+        const schoolYear = req?.schoolYear || '2025-2026';
         return this.prisma.section.findMany({
+            where: { school_year: schoolYear },
             include: {
                 teacher: true,
                 _count: {
@@ -25,18 +38,27 @@ export class SectionService {
         });
     }
 
-    async findAllWithDetails() {
+    async findAllWithDetails(req?: SchoolYearRequest) {
+        const schoolYear = req?.schoolYear || '2025-2026';
         const students = await this.prisma.user.findMany({
             where: { role: 'student' },
-            include: { assigned_section: true },
+            include: {
+                assigned_section: {
+                    where: { school_year: schoolYear },
+                },
+            },
         });
 
         return { students };
     }
 
-    async findOne(id: string) {
-        return this.prisma.section.findUnique({
-            where: { id },
+    async findOne(id: string, req?: SchoolYearRequest) {
+        const schoolYear = req?.schoolYear || '2025-2026';
+        return this.prisma.section.findFirst({
+            where: {
+                id,
+                school_year: schoolYear,
+            },
             include: {
                 teacher: true,
                 students: true,
@@ -102,6 +124,7 @@ export class SectionService {
                 NOT: {
                     id: { in: assignedSubjectIds },
                 },
+                school_year: section.school_year!,
             },
             orderBy: { title: 'asc' },
         });
