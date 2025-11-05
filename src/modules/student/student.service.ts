@@ -3,12 +3,14 @@ import { PrismaService } from 'src/modules/prisma/prisma.service';
 import { ClsService } from 'nestjs-cls';
 import { Condition } from '@prisma/client';
 import { SchoolYearRequest } from '../school-year/school-year.middleware';
+import { StudentProgressService } from '../student-progress/student-progress.service';
 
 @Injectable()
 export class StudentService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly cls: ClsService,
+        private readonly studentProgressService: StudentProgressService,
     ) {}
 
     async fetchMySection(id: string, req?: SchoolYearRequest) {
@@ -44,6 +46,14 @@ export class StudentService {
             },
         });
         console.log('student section', section);
+
+        for (const subject of section?.subjects || []) {
+            await this.studentProgressService.getStudentProgressBySubject(
+                id,
+                subject.id,
+                req,
+            );
+        }
 
         if (!section) throw new NotFoundException('Student not enrolled yet');
         return section;
@@ -147,6 +157,27 @@ export class StudentService {
             },
         });
 
-        return { student, guardian, submissions, subjects };
+        // Get student progress for each subject
+        const subjectsWithProgress = await Promise.all(
+            subjects.map(async (subject) => {
+                const progress =
+                    await this.studentProgressService.getProgressWithDetails(
+                        id,
+                        subject.id,
+                        req,
+                    );
+                return {
+                    ...subject,
+                    progress,
+                };
+            }),
+        );
+
+        return {
+            student,
+            guardian,
+            submissions,
+            subjects: subjectsWithProgress,
+        };
     }
 }

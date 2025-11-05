@@ -127,6 +127,8 @@ model User {
     @@deny('all', true)                              // Deny everything else by default
 
 	reports NarrativeReport[]
+
+	studentProgress StudentProgress[]
 }
 
 model Section {
@@ -170,6 +172,8 @@ model Subject {
     @@allow('all', auth().role == 'admin')
     @@allow('read', auth().role == 'teacher')
     @@allow('read', auth().role == 'student')
+
+	studentProgress StudentProgress[]
 }
 
 model Lesson {
@@ -290,6 +294,8 @@ model ActivitySubmission {
   status        SubmissionStatus @default(pending)
   version       Int      @default(1)
   is_latest     Boolean  @default(true)
+  progressPoints Int?     // Progress points earned from this submission
+  previousProgressPoints Int? // Previous progress points to be replaced (for retakes)
 
   activity_id   String
   activity      Activity @relation(fields: [activity_id], references: [id])
@@ -392,4 +398,36 @@ model NarrativeReportSettings {
     principal String
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+}
+
+model ProgressLevel {
+    id          String       @id @default(uuid())
+    level       ActivityLevel // beginner, intermediate, advance
+    minPoints   Int          // Minimum points required for this level
+    maxPoints   Int          // Maximum points for this level (exclusive)
+    pointValue  Int          // Maximum progress points that can be earned from activities at this level
+    schoolYear  String       @default("2025-2026")
+    createdAt   DateTime     @default(now())
+    updatedAt   DateTime     @updatedAt()
+    
+    @@unique([level, schoolYear])
+    @@allow('all', auth().role == 'admin')
+    @@allow('read', true)
+}
+
+model StudentProgress {
+    id            String   @id @default(uuid())
+    studentId     String
+    student       User     @relation(fields: [studentId], references: [id])
+    subjectId     String
+    subject       Subject @relation(fields: [subjectId], references: [id])
+    currentLevel  ActivityLevel @default(beginner)
+    totalPoints   Int      @default(0)
+    schoolYear    String   @default("2025-2026")
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt()
+    
+    @@unique([studentId, subjectId, schoolYear])
+    @@allow('read', auth().id == studentId || auth().role == 'admin' || auth().role == 'teacher')
+    @@allow('all', auth().role == 'admin')
 }

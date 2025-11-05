@@ -20,6 +20,8 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { NarrativeReportModule } from './modules/narrative-report/narrative-report.module';
 import { LearningMaterialModule } from './modules/learning-material/learning-material.module';
 import { SchoolYearModule } from './modules/school-year/school-year.module';
+import { ProgressLevelModule } from './modules/progress-level/progress-level.module';
+import { StudentProgressModule } from './modules/student-progress/student-progress.module';
 
 @Module({
     imports: [
@@ -47,6 +49,8 @@ import { SchoolYearModule } from './modules/school-year/school-year.module';
         NarrativeReportModule,
         LearningMaterialModule,
         SchoolYearModule,
+        ProgressLevelModule,
+        StudentProgressModule,
     ],
     controllers: [],
     providers: [

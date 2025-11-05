@@ -5,10 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SchoolYear } from '@prisma/client';
+import { ProgressLevelService } from '../progress-level/progress-level.service';
 
 @Injectable()
 export class SchoolYearService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly progressLevelService: ProgressLevelService,
+    ) {}
 
     async createSchoolYear(year: string): Promise<SchoolYear> {
         // Check if school year already exists
@@ -27,12 +31,19 @@ export class SchoolYearService {
         });
 
         // Create new school year and activate it
-        return this.prisma.schoolYear.create({
+        const newSchoolYear = await this.prisma.schoolYear.create({
             data: {
                 year,
                 isActive: true,
             },
         });
+
+        // Create initial progress levels for the new school year
+        await this.progressLevelService.seedDefaultProgressLevels({
+            schoolYear: year,
+        } as any);
+
+        return newSchoolYear;
     }
 
     async getActiveSchoolYear(): Promise<SchoolYear> {

@@ -11,6 +11,8 @@ import { NotificationService } from '../notification/notification.service';
 import { ClsService } from 'nestjs-cls';
 import { Condition } from '@prisma/client';
 import { SchoolYearRequest } from '../school-year/school-year.middleware';
+import { ProgressLevelService } from '../progress-level/progress-level.service';
+import { StudentProgressService } from '../student-progress/student-progress.service';
 
 @Injectable()
 export class ActivityService {
@@ -20,6 +22,8 @@ export class ActivityService {
         private readonly email: EmailService,
         private readonly notification: NotificationService,
         private readonly cls: ClsService,
+        private readonly progressLevelService: ProgressLevelService,
+        private readonly studentProgressService: StudentProgressService,
     ) {}
 
     async createActivity(data, files, req?: SchoolYearRequest) {
@@ -290,6 +294,31 @@ export class ActivityService {
         // Add category filtering for students
         if (user.role === 'student') {
             activityWhere.category = user.condition as Condition;
+
+            // Add level filtering for students - only show activities at or below their current level
+            const studentProgress =
+                await this.studentProgressService.getStudentProgressBySubject(
+                    user.id,
+                    subject,
+                    { schoolYear } as any,
+                );
+
+            if (studentProgress) {
+                const levelHierarchy = {
+                    beginner: 1,
+                    intermediate: 2,
+                    advance: 3,
+                };
+
+                const studentLevelValue =
+                    levelHierarchy[studentProgress.currentLevel];
+
+                activityWhere.level = {
+                    in: ['beginner', 'intermediate', 'advance'].filter(
+                        (level) => levelHierarchy[level] <= studentLevelValue,
+                    ),
+                };
+            }
         }
 
         return this.prisma.activity.findMany({
@@ -411,6 +440,31 @@ export class ActivityService {
             }
         }
 
+        // Calculate progress points for this submission
+        let progressPoints = 0;
+        let previousProgressPoints = 0;
+
+        if (activity.graded && body.score !== undefined) {
+            const questions = JSON.parse(activity.questions);
+            let maxPoints = 0;
+            for (const q of questions) {
+                maxPoints += q.points;
+            }
+
+            progressPoints =
+                await this.progressLevelService.calculateProgressPoints(
+                    body.score,
+                    maxPoints,
+                    activity.level,
+                    { schoolYear: activity.school_year } as any,
+                );
+
+            // If this is a retake, get previous progress points to replace
+            if (prevSubmission.length > 0 && prevSubmission[0].progressPoints) {
+                previousProgressPoints = prevSubmission[0].progressPoints;
+            }
+        }
+
         // Calculate version number for this submission
         const version =
             prevSubmission.length > 0 ? prevSubmission[0].version + 1 : 1;
@@ -438,8 +492,21 @@ export class ActivityService {
                 is_latest: true,
                 previous_submission_id:
                     prevSubmission.length > 0 ? prevSubmission[0].id : null,
+                progressPoints,
+                previousProgressPoints,
             },
         });
+
+        // Update student progress with new points
+        if (progressPoints > 0) {
+            const netPoints = progressPoints - previousProgressPoints;
+            await this.studentProgressService.updateStudentProgress(
+                studentId,
+                activity.subject_id,
+                netPoints,
+                { schoolYear: activity.school_year } as any,
+            );
+        }
 
         // If this was a retake, remove the retake permission after submission
         if (prevSubmission.length > 0) {
@@ -494,6 +561,18 @@ export class ActivityService {
                         id: true,
                         avatar: true,
                         full_name: true,
+                        studentProgress: {
+                            where: {
+                                subject: {
+                                    activities: {
+                                        some: { id: activityId },
+                                    },
+                                },
+                            },
+                            select: {
+                                currentLevel: true,
+                            },
+                        },
                     },
                 },
                 activity: {
@@ -554,6 +633,42 @@ export class ActivityService {
         if (score > maxPoints)
             throw new BadRequestException('Score exceeds max points');
 
+        // Find previous submission to check for retakes
+        const previousSubmission =
+            await this.prisma.activitySubmission.findFirst({
+                where: {
+                    student_id: submission.student_id,
+                    activity_id: submission.activity_id,
+                    is_latest: false,
+                },
+                orderBy: {
+                    version: 'desc',
+                },
+            });
+
+        // Calculate progress points for this graded submission
+        let progressPoints = 0;
+        let previousProgressPoints = 0;
+
+        progressPoints =
+            await this.progressLevelService.calculateProgressPoints(
+                score,
+                maxPoints,
+                activity.level,
+                { schoolYear: activity.school_year } as any,
+            );
+        // Get previous progress points from previous submission if it exists
+        if (previousSubmission && previousSubmission.progressPoints) {
+            previousProgressPoints = previousSubmission.progressPoints;
+        }
+
+        console.log({
+            progressPoints,
+            previousProgressPoints,
+            score,
+            maxPoints,
+            activityLevel: activity.level,
+        });
         const updatedSubmission = await this.prisma.activitySubmission.update({
             where: {
                 id: submissionId,
@@ -561,8 +676,22 @@ export class ActivityService {
             data: {
                 score,
                 status: 'graded',
+                progressPoints,
+                previousProgressPoints,
             },
         });
+
+        // Update student progress with new points
+        if (progressPoints >= 0) {
+            const netPoints = progressPoints - previousProgressPoints;
+            console.log({ netPoints });
+            await this.studentProgressService.updateStudentProgress(
+                submission.student_id,
+                activity.subject_id,
+                netPoints,
+                { schoolYear: activity.school_year } as any,
+            );
+        }
 
         const student = await this.prisma.user.findUnique({
             where: { id: submission.student_id },

@@ -99,6 +99,7 @@ model User {
   resetOtps          ResetOtp[]
   retake_permissions ActivityRetakePermission[]
   reports            NarrativeReport[]
+  studentProgress    StudentProgress[]
 }
 
 model Section {
@@ -117,17 +118,18 @@ model Section {
 }
 
 model Subject {
-  id                String     @id() @default(uuid())
+  id                String            @id() @default(uuid())
   title             String
   description       String?
   image             String?
-  created_at        DateTime   @default(now())
-  updated_at        DateTime   @updatedAt()
-  category          Condition  @default(deaf)
-  school_year       String     @default("2025-2026")
-  assigned_sections Section[]  @relation("SectionSubjects")
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt()
+  category          Condition         @default(deaf)
+  school_year       String            @default("2025-2026")
+  assigned_sections Section[]         @relation("SectionSubjects")
   lessons           Lesson[]
   activities        Activity[]
+  studentProgress   StudentProgress[]
 }
 
 model Lesson {
@@ -219,6 +221,8 @@ model ActivitySubmission {
   status                 SubmissionStatus     @default(pending)
   version                Int                  @default(1)
   is_latest              Boolean              @default(true)
+  progressPoints         Int?
+  previousProgressPoints Int?
   activity_id            String
   activity               Activity             @relation(fields: [activity_id], references: [id])
   student_id             String
@@ -304,4 +308,32 @@ model NarrativeReportSettings {
   principal String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt()
+}
+
+model ProgressLevel {
+  id         String        @id() @default(uuid())
+  level      ActivityLevel
+  minPoints  Int
+  maxPoints  Int
+  pointValue Int
+  schoolYear String        @default("2025-2026")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt()
+
+  @@unique([level, schoolYear])
+}
+
+model StudentProgress {
+  id           String        @id() @default(uuid())
+  studentId    String
+  student      User          @relation(fields: [studentId], references: [id])
+  subjectId    String
+  subject      Subject       @relation(fields: [subjectId], references: [id])
+  currentLevel ActivityLevel @default(beginner)
+  totalPoints  Int           @default(0)
+  schoolYear   String        @default("2025-2026")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt()
+
+  @@unique([studentId, subjectId, schoolYear])
 }
